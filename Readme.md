@@ -12,7 +12,7 @@ EXAMPLE :\
     * sage: n = 8192\
     * sage: q = next_prime(2^125)\
     * sage: alpha = 8 / q\
-    * sage: MITM_estimator(n, alpha, q, 11, 1, 13)\
+    * sage: MITM_estimator(n, alpha, q, 11, 1, 13)
 
         Chosen Constants :
             n = 8192, q = 42535295865117307932921825928971026459
