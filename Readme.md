@@ -8,11 +8,11 @@ Most of our functions are simply modifed from "estimator.py", just fit our algor
 We recommand to use our /*MITM_estimator*/ function in "estimator_Hybrid.py". This function estimates the cost of ring operations and memory.
 
 EXAMPLE :
-    sage: from estimator_hybrid import * //
-    sage: n = 8192 //
-    sage: q = next_prime(2^125) //
-    sage: alpha = 8 / q //
-    sage: MITM_estimator(n, alpha, q, 11, 1, 13) //
+    * sage: from estimator_hybrid import *\
+    * sage: n = 8192\
+    * sage: q = next_prime(2^125)\
+    * sage: alpha = 8 / q\
+    * sage: MITM_estimator(n, alpha, q, 11, 1, 13)\
 
         Chosen Constants :
             n = 8192, q = 42535295865117307932921825928971026459
