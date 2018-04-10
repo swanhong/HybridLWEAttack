@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "/Users/swan/C/hybAttack"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true,
+		"files.associations": {
+			"ostream": "cpp",
+			"ios": "cpp",
+			"locale": "cpp",
+			"typeinfo": "cpp"
+		}
+	}
+}
