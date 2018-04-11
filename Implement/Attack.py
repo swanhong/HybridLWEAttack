@@ -240,13 +240,13 @@ def generate_table(S, tau):
 def noisy_search(q, T, bound, query):
         
     tau = len(query)
-    sgn_ = vector(ZZ, tau)
+    sgn_ = []
     index = []
     for i in range(tau):
         if bound < abs(query[i]) < q//2 - bound:
-            sgn_[i] = query[i] // (q//2) # 0 if query[i] < 0, 1 otherwise
+            sgn_.append(query[i] // (q//2)) # 0 if query[i] is negative / 1 otherwise
         else:
-            sgn_[i] = 1
+            sgn_.append(1) # 1 if query[i] is a "bad case"
             index.append(i)
 
     return check_collision(sgn_, T, index, 0)
@@ -295,10 +295,8 @@ def hybrid_mitm(A, c, beta, h, m=None, tau, scale=1, float_type="double", k, ell
 def data_gen(A, ell):
     k = A.ncols()
     s = vector(ZZ, k)
-    s[0] = 1
     S = set()
-    S.add = A[0]
-    data_recursive(A, S, s, 1, ell, 1)
+    data_recursive(A, S, s, 0, ell, 0)
     return S
 
 def data_recursive(A, S, s, position, ell, num_one):
@@ -310,8 +308,8 @@ def data_recursive(A, S, s, position, ell, num_one):
         s[position] = 1
         num_one += 1
         S.add(A[position])
-        for vec in S:
-            S.add(vec + A[position])
+        for v in S:
+            S.add(v + A[position])
         data_recursive(A, S, s, position + 1, ell + 1)        
 
 def concatenate(A, k):
@@ -321,9 +319,25 @@ def concatenate(A, k):
         A1[i] = A[i]
     return A1
 
-def max_norm(vec):
-    max = vec[0]
-    for i in range(len(1, vec)):
-        if max < vec[i]:
-            max = vec[i]
+def max_norm(v):
+    length = len(v)
+    max = v[0]
+    for i in range(1, length)):
+        if max < v[i]:
+            max = v[i]
     return max
+
+def sgn(v):
+    length = len(v)
+    bin = []
+    for i in range(length):
+        bin.append()
+        bin[i] = query[i] // (q//2)
+    return bin
+
+def power(v):
+    length = len(v)
+    pow = v[0]
+    for i in range(1, length):
+        pow += 2**i * v[i]
+    return pow
