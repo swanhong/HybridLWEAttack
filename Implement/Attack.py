@@ -256,7 +256,7 @@ def check_collision(v, T, index, index_num):
     '''
 
     if index_num == len(index): 
-        if v in T:
+        if power(v) in T:
             for vec in T[v]:
                 if max_norm(query - vec) <= bound:
                     return vec
@@ -296,7 +296,7 @@ def data_gen(A, ell):
                 tmp[0] += A[i]
                 tmp[1] += 1
                 TMP.add(tmp)
-        TMP.add([[A[i],1])
+        TMP.add([A[i],1])
                  
     S = set()
     for v in TMP:
