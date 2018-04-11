@@ -298,21 +298,21 @@ def data_gen(A, ell):
     s[0] = 1
     S = set()
     S.add = A[0]
-    S_recursive(A, S, s, 1, ell, 1)
+    data_recursive(A, S, s, 1, ell, 1)
     return S
 
 def data_recursive(A, S, s, position, ell, num_one):
     # FIXME
     if position < len(s) and num_one <= ell :
         s[position] = 0
-        S_recursive(A, S, s, position + 1, ell)
+        data_recursive(A, S, s, position + 1, ell)
 
         s[position] = 1
         num_one += 1
         S.add(A[position])
         for vec in S:
             S.add(vec + A[position])
-        S_recursive(A, S, s, position + 1, ell + 1)        
+        data_recursive(A, S, s, position + 1, ell + 1)        
 
 def concatenate(A, k):
     m = A.nrows()
