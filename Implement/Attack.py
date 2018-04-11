@@ -181,41 +181,37 @@ def dim_error_tradeoff(A, c, beta, h, m=None, tau, scale=1, float_type="double",
     y_i = vector(ZZ, tuple(L[0]))
     Y.add(tuple(y_i))
 
-    temp = apply_short1(y_i, A, c, scale=scale)
-    E[0] = temp[0]
-    f[0] = temp[1]
+    E[0], f[0] = apply_short1(y_i, A, c, scale=scale)
 
-    v = L[0].norm()
-    v_ = v/sqrt(L.ncols)
-    v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
-    v_l = sqrt(h)*v_
+    #v = L[0].norm()
+    #v_ = v/sqrt(L.ncols)
+    #v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
+    #v_l = sqrt(h)*v_
 
     # fmt = u"{\"t\": %5.1fs, \"log(sigma)\": %5.1f, \"log(|y|)\": %5.1f, \"log(E[sigma]):\" %5.1f}"
 
-    print
-    print fmt%(t,
-               log(abs(E[-1]), 2),
-               log(L[0].norm(), 2),
-               log(sqrt(v_r**2 + v_l**2), 2))
-    print
+    #print
+    #print fmt%(t,
+    #           log(abs(E[-1]), 2),
+    #           log(L[0].norm(), 2),
+    #           log(sqrt(v_r**2 + v_l**2), 2))
+    #print
     for i in range(1, tau):
-        t = cputime()
+        #t = cputime()
         M = GSO.Mat(L, float_type=float_type)
         bkz = BKZ2(M)
-        t = cputime()
+        #t = cputime()
         bkz.randomize_block(0, L.nrows, stats=None, density=3)
         LLL.reduction(L)
         y_i = vector(ZZ, tuple(L[0]))
         l_n = L[0].norm()
         if L[0].norm() > H[0].norm():
             L = copy(H)
-        t = cputime(t)
+        #t = cputime(t)
 
         Y.add(tuple(y_i))
         # V.add(y_i.norm())
-        temp = apply_short1(y_i, A, c, scale=scale)
-        E[i] = temp[0]
-        f[i] = temp[1]
+        E[i], f[i] = apply_short1(y_i, A, c, scale=scale)
         #if len(V) >= 2:
         #    fmt =  u"{\"i\": %4d, \"t\": %5.1fs, \"log(|e_i|)\": %5.1f, \"log(|y_i|)\": %5.1f,"
         #    fmt += u"\"log(sigma)\": (%5.1f,%5.1f), \"log(|y|)\": (%5.1f,%5.1f), |Y|: %5d}"
@@ -223,17 +219,17 @@ def dim_error_tradeoff(A, c, beta, h, m=None, tau, scale=1, float_type="double",
 
     return E, f
 
-def generate_table(S, tau):    
+def generate_table(S):    
 
     T = {} # empty dictionary
 
-    for vec in S:
-        sgnvec = Power(sgn(vec)) # dictionary의 key 부분이 무지막지하게 (2^tau 수준) 커져도 괜찮나?
+    for v in S:
+        sgnvec = power(sgn(v)) # dictionary의 key 부분이 무지막지하게 (2^tau 수준) 커져도 괜찮나?
         if sgnvec in T:
-            T[sgnvec].append(vec)
+            T[sgnvec].append(v)
         else:
             T[sgnvec] = []
-            T[sgnvec].append(vec)
+            T[sgnvec].append(v)
 
     return T
 
@@ -264,7 +260,6 @@ def check_collision(v, T, index, index_num):
             for vec in T[v]:
                 if max_norm(query - vec) <= bound:
                     return vec
-        return None
 
     else:
         for i in [0, 1]:
@@ -272,7 +267,6 @@ def check_collision(v, T, index, index_num):
             vec = check_collision(v, T, index, index_num + 1)
             if vec is not None:
                 return vec
-    return None
             
 
 def hybrid_mitm(A, c, beta, h, m=None, tau, scale=1, float_type="double", k, ell):
@@ -294,12 +288,24 @@ def hybrid_mitm(A, c, beta, h, m=None, tau, scale=1, float_type="double", k, ell
 
 def data_gen(A, ell):
     k = A.ncols()
-    s = vector(ZZ, k)
+    TMP = set()
+    for i in range(k):     
+        for v in TMP:
+            if v[1] < ell:
+                tmp = v
+                tmp[0] += A[i]
+                tmp[1] += 1
+                TMP.add(tmp)
+        TMP.add([[A[i],1])
+                 
     S = set()
-    data_recursive(A, S, s, 0, ell, 0)
+    for v in TMP:
+        S.add(v[0])
+                 
+        # data_recursive(A, S, s, 0, ell, 0)
     return S
 
-def data_recursive(A, S, s, position, ell, num_one):
+'''def data_recursive(A, S, s, position, ell, num_one):
     # FIXME
     if position < len(s) and num_one <= ell :
         s[position] = 0
@@ -310,7 +316,7 @@ def data_recursive(A, S, s, position, ell, num_one):
         S.add(A[position])
         for v in S:
             S.add(v + A[position])
-        data_recursive(A, S, s, position + 1, ell + 1)        
+        data_recursive(A, S, s, position + 1, ell + 1)   '''     
 
 def concatenate(A, k):
     m = A.nrows()
