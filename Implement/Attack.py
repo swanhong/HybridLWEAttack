@@ -328,7 +328,7 @@ def concatenate(A, k):
 def max_norm(v):
     length = len(v)
     max = v[0]
-    for i in range(1, length)):
+    for i in range(1, length):
         if max < v[i]:
             max = v[i]
     return max
