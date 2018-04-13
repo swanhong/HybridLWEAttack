@@ -10,6 +10,172 @@ from sage.stats.distributions.discrete_gaussian_integer import DiscreteGaussianD
     as DiscreteGaussian
 import sys
 
+
+def dual_instance0(A):
+    """
+    Generate dual attack basis.
+
+    :param A: LWE matrix A
+
+    """
+    q = A.base_ring().order()
+    B0 = A.left_kernel().basis_matrix().change_ring(ZZ)
+    m = B0.ncols()
+    n = B0.nrows()
+    r = m-n
+    B1 = matrix(ZZ, r, n).augment(q*identity_matrix(ZZ, r))
+    B = B0.stack(B1)
+    return B
+
+
+def dual_instance1(A, scale=1):
+    """
+    Generate dual attack basis for LWE normal form.
+
+    :param A: LWE matrix A
+
+    """
+    q = A.base_ring().order()
+    n = A.ncols()
+    B = A.matrix_from_rows(range(0, n)).inverse().change_ring(ZZ)
+    L = identity_matrix(ZZ, n).augment(B)
+    L = L.stack(matrix(ZZ, n, n).augment(q*identity_matrix(ZZ, n)))
+
+    for i in range(0, 2*n):
+        for j in range(n, 2*n):
+            L[i, j] = scale*L[i, j]
+
+    return L
+
+
+def balanced_lift(e):
+    """
+    Lift e mod q to integer such that result is between -q/2 and q/2
+
+    :param e: a value or vector mod q
+
+    """
+    from sage.rings.finite_rings.integer_mod import is_IntegerMod
+
+    q = e.base_ring().order()
+    if is_IntegerMod(e):
+        e = ZZ(e)
+        if e > q//2:
+            e -= q
+        return e
+    else:
+        return vector(balanced_lift(ee) for ee in e)
+
+
+def apply_short1(y, A, c, scale=1):
+    """
+    Compute `y*A`, `y*c` where y is a vector in the integer row span of
+    ``dual_instance(A)``
+
+    :param y: (short) vector in scaled dual lattice
+    :param A: LWE matrix
+    :param c: LWE vector
+    """
+    m = A.nrows()
+    y = vector(ZZ, 1/ZZ(scale) * y[-m:])
+    a = balanced_lift(y*A)
+    e = balanced_lift(y*c)
+    return a, e
+
+
+def log_mean(X):
+    return log(mean([abs(x) for x in X]), 2)
+
+
+def log_var(X):
+    return log(variance(X).sqrt(), 2)
+
+
+def dim_error_tradeoff(A, c, beta, h, tau, k, m=None, scale=1, float_type="double"):
+    """
+
+    :param A:    LWE matrix
+    :param c:    LWE vector
+    :param beta: BKW block size
+    :param m:    number of given LWE samples
+    :param tau:  number of new samples to generate
+    :param scale: scale rhs of lattice by this factor
+    :param k:    LWE dim after tradeoff
+
+    """
+    from fpylll import BKZ, IntegerMatrix, LLL, GSO
+    from fpylll.algorithms.bkz2 import BKZReduction as BKZ2
+
+    if m is None:
+        m = A.nrows()
+
+    A1 = concatenate(A, n-k)
+
+    L = dual_instance1(A, scale=scale)
+    L = IntegerMatrix.from_matrix(L)
+    L = LLL.reduction(L, flags=LLL.VERBOSE)
+    M = GSO.Mat(L, float_type=float_type)
+    bkz = BKZ2(M)
+    t = 0.0
+    param = BKZ.Param(block_size=beta,
+                      strategies=BKZ.DEFAULT_STRATEGY,
+                      auto_abort=True,
+                      max_loops=16,
+                      flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
+    bkz(param)
+    t += bkz.stats.total_time
+
+    H = copy(L)
+
+    # import pickle
+    # pickle.dump(L, open("L-%d-%d.sobj"%(L.nrows, beta), "wb"))
+
+    # E = []
+    E = matrix(K, tau, k)
+    f = vector(K, tau)
+    Y = set()
+    # V = set()
+    y_i = vector(ZZ, tuple(L[0]))
+    Y.add(tuple(y_i))
+
+    E[0], f[0] = apply_short1(y_i, A, c, scale=scale)
+
+    #v = L[0].norm()
+    #v_ = v/sqrt(L.ncols)
+    #v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
+    #v_l = sqrt(h)*v_
+
+    # fmt = u"{\"t\": %5.1fs, \"log(sigma)\": %5.1f, \"log(|y|)\": %5.1f, \"log(E[sigma]):\" %5.1f}"
+
+    #print
+    #print fmt%(t,
+    #           log(abs(E[-1]), 2),
+    #           log(L[0].norm(), 2),
+    #           log(sqrt(v_r**2 + v_l**2), 2))
+    #print
+    for i in range(1, tau):
+        #t = cputime()
+        M = GSO.Mat(L, float_type=float_type)
+        bkz = BKZ2(M)
+        #t = cputime()
+        bkz.randomize_block(0, L.nrows, stats=None, density=3)
+        LLL.reduction(L)
+        y_i = vector(ZZ, tuple(L[0]))
+        l_n = L[0].norm()
+        if L[0].norm() > H[0].norm():
+            L = copy(H)
+        #t = cputime(t)
+
+        Y.add(tuple(y_i))
+        # V.add(y_i.norm())
+        E[i], f[i] = apply_short1(y_i, A, c, scale=scale)
+        #if len(V) >= 2:
+        #    fmt =  u"{\"i\": %4d, \"t\": %5.1fs, \"log(|e_i|)\": %5.1f, \"log(|y_i|)\": %5.1f,"
+        #    fmt += u"\"log(sigma)\": (%5.1f,%5.1f), \"log(|y|)\": (%5.1f,%5.1f), |Y|: %5d}"
+        #    print fmt%(i+2, t, log(abs(E[-1]), 2), log(l_n, 2), log_mean(E), log_var(E), log_mean(V), log_var(V), len(Y))
+
+    return E, f
+
 def generate_table(S, q):    
 
     T = {} # empty dictionary
@@ -245,7 +411,7 @@ def gen_instance(n, q, h, alpha=None, m=None, seed=None):
     #stddev = alpha*q/RR(sqrt(2*pi))
 
     if m is None:
-        m = 2*n
+        m = 2 * n
     K = GF(q, proof=False)
 
     while 1:
