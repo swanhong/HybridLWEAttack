@@ -164,7 +164,7 @@ def silke(A, c, beta, h, m=None, scale=1, float_type="double"):
                       max_loops=16,
                       flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
     bkz(param)
-    #t += bkz.stats.total_time
+    t += bkz.traces.data.items()[0][1] # bkz time
 
     H = copy(L)
 
