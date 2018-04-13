@@ -6,7 +6,7 @@ from sage.all import GF, ZZ
 from sage.all import random_matrix, random_vector, vector, matrix, identity_matrix
 from sage.stats.distributions.discrete_gaussian_integer import DiscreteGaussianDistributionIntegerSampler \
     as DiscreteGaussian
-from estimator.estimator import preprocess_params, stddevf
+from estimator.estimator import preprocess, stddevf
 
 
 def gen_fhe_instance(n, q, alpha=None, h=None, m=None, seed=None):
@@ -134,7 +134,7 @@ def log_var(X):
     return log(variance(X).sqrt(), 2)
 
 
-def dim_error_tradeoff(A, c, beta, h, m=None, tau, scale=1, float_type="double", k):
+def dim_error_tradeoff(A, c, beta, h, tau, k, m=None, scale=1, float_type="double"):
     """
 
     :param A:    LWE matrix
@@ -181,41 +181,37 @@ def dim_error_tradeoff(A, c, beta, h, m=None, tau, scale=1, float_type="double",
     y_i = vector(ZZ, tuple(L[0]))
     Y.add(tuple(y_i))
 
-    temp = apply_short1(y_i, A, c, scale=scale)
-    E[0] = temp[0]
-    f[0] = temp[1]
+    E[0], f[0] = apply_short1(y_i, A, c, scale=scale)
 
-    v = L[0].norm()
-    v_ = v/sqrt(L.ncols)
-    v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
-    v_l = sqrt(h)*v_
+    #v = L[0].norm()
+    #v_ = v/sqrt(L.ncols)
+    #v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
+    #v_l = sqrt(h)*v_
 
     # fmt = u"{\"t\": %5.1fs, \"log(sigma)\": %5.1f, \"log(|y|)\": %5.1f, \"log(E[sigma]):\" %5.1f}"
 
-    print
-    print fmt%(t,
-               log(abs(E[-1]), 2),
-               log(L[0].norm(), 2),
-               log(sqrt(v_r**2 + v_l**2), 2))
-    print
+    #print
+    #print fmt%(t,
+    #           log(abs(E[-1]), 2),
+    #           log(L[0].norm(), 2),
+    #           log(sqrt(v_r**2 + v_l**2), 2))
+    #print
     for i in range(1, tau):
-        t = cputime()
+        #t = cputime()
         M = GSO.Mat(L, float_type=float_type)
         bkz = BKZ2(M)
-        t = cputime()
+        #t = cputime()
         bkz.randomize_block(0, L.nrows, stats=None, density=3)
         LLL.reduction(L)
         y_i = vector(ZZ, tuple(L[0]))
         l_n = L[0].norm()
         if L[0].norm() > H[0].norm():
             L = copy(H)
-        t = cputime(t)
+        #t = cputime(t)
 
         Y.add(tuple(y_i))
         # V.add(y_i.norm())
-        temp = apply_short1(y_i, A, c, scale=scale)
-        E[i] = temp[0]
-        f[i] = temp[1]
+        E[i], f[i] = apply_short1(y_i, A, c, scale=scale)
         #if len(V) >= 2:
         #    fmt =  u"{\"i\": %4d, \"t\": %5.1fs, \"log(|e_i|)\": %5.1f, \"log(|y_i|)\": %5.1f,"
         #    fmt += u"\"log(sigma)\": (%5.1f,%5.1f), \"log(|y|)\": (%5.1f,%5.1f), |Y|: %5d}"
@@ -223,30 +219,30 @@ def dim_error_tradeoff(A, c, beta, h, m=None, tau, scale=1, float_type="double",
 
     return E, f
 
-def generate_table(S, tau):    
+def generate_table(S):    
 
     T = {} # empty dictionary
 
-    for vec in S:
-        sgnvec = Power(sgn(vec)) # dictionary의 key 부분이 무지막지하게 (2^tau 수준) 커져도 괜찮나?
+    for v in S:
+        sgnvec = power(sgn(v)) # dictionary의 key 부분이 무지막지하게 (2^tau 수준) 커져도 괜찮나?
         if sgnvec in T:
-            T[sgnvec].append(vec)
+            T[sgnvec].append(v)
         else:
             T[sgnvec] = []
-            T[sgnvec].append(vec)
+            T[sgnvec].append(v)
 
     return T
 
 def noisy_search(q, T, bound, query):
         
     tau = len(query)
-    sgn_ = vector(ZZ, tau)
+    sgn_ = []
     index = []
     for i in range(tau):
         if bound < abs(query[i]) < q//2 - bound:
-            sgn_[i] = query[i] // (q//2) # 0 if query[i] < 0, 1 otherwise
+            sgn_.append(query[i] // (q//2)) # 0 if query[i] is negative / 1 otherwise
         else:
-            sgn_[i] = 1
+            sgn_.append(1) # 1 if query[i] is a "bad case"
             index.append(i)
 
     return check_collision(sgn_, T, index, 0)
@@ -260,11 +256,10 @@ def check_collision(v, T, index, index_num):
     '''
 
     if index_num == len(index): 
-        if v in T:
+        if power(v) in T:
             for vec in T[v]:
                 if max_norm(query - vec) <= bound:
                     return vec
-        return None
 
     else:
         for i in [0, 1]:
@@ -272,10 +267,9 @@ def check_collision(v, T, index, index_num):
             vec = check_collision(v, T, index, index_num + 1)
             if vec is not None:
                 return vec
-    return None
             
 
-def hybrid_mitm(A, c, beta, h, m=None, tau, scale=1, float_type="double", k, ell):
+def hybrid_mitm(A, c, beta, h, tau, k, ell, m=None, scale=1, float_type="double"):
     
     # Lattice reduction stage
     E, f = dim_error_tradeoff(A, c, beta, h, m, tau, scale, float_type, k)
@@ -294,14 +288,24 @@ def hybrid_mitm(A, c, beta, h, m=None, tau, scale=1, float_type="double", k, ell
 
 def data_gen(A, ell):
     k = A.ncols()
-    s = vector(ZZ, k)
-    s[0] = 1
+    TMP = set()
+    for i in range(k):     
+        for v in TMP:
+            if v[1] < ell:
+                tmp = v
+                tmp[0] += A[i]
+                tmp[1] += 1
+                TMP.add(tmp)
+        TMP.add([A[i],1])
+                 
     S = set()
-    S.add = A[0]
-    data_recursive(A, S, s, 1, ell, 1)
+    for v in TMP:
+        S.add(v[0])
+                 
+        # data_recursive(A, S, s, 0, ell, 0)
     return S
 
-def data_recursive(A, S, s, position, ell, num_one):
+'''def data_recursive(A, S, s, position, ell, num_one):
     # FIXME
     if position < len(s) and num_one <= ell :
         s[position] = 0
@@ -310,9 +314,9 @@ def data_recursive(A, S, s, position, ell, num_one):
         s[position] = 1
         num_one += 1
         S.add(A[position])
-        for vec in S:
-            S.add(vec + A[position])
-        data_recursive(A, S, s, position + 1, ell + 1)        
+        for v in S:
+            S.add(v + A[position])
+        data_recursive(A, S, s, position + 1, ell + 1)   '''     
 
 def concatenate(A, k):
     m = A.nrows()
@@ -321,9 +325,25 @@ def concatenate(A, k):
         A1[i] = A[i]
     return A1
 
-def max_norm(vec):
-    max = vec[0]
-    for i in range(len(1, vec)):
-        if max < vec[i]:
-            max = vec[i]
+def max_norm(v):
+    length = len(v)
+    max = v[0]
+    for i in range(1, length):
+        if max < v[i]:
+            max = v[i]
     return max
+
+def sgn(v):
+    length = len(v)
+    bin = []
+    for i in range(length):
+        bin.append()
+        bin[i] = query[i] // (q//2)
+    return bin
+
+def power(v):
+    length = len(v)
+    pow = v[0]
+    for i in range(1, length):
+        pow += 2**i * v[i]
+    return pow
