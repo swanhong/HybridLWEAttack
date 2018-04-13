@@ -2,11 +2,13 @@
 
 from sage.all import shuffle, randint, ceil, next_prime, log, cputime, mean, variance, set_random_seed, sqrt
 from copy import copy
-from sage.all import GF, ZZ
+from sage.all import GF, ZZ, RR
 from sage.all import random_matrix, random_vector, vector, matrix, identity_matrix
 from sage.stats.distributions.discrete_gaussian_integer import DiscreteGaussianDistributionIntegerSampler \
     as DiscreteGaussian
-from estimator.estimator import preprocess, stddevf
+from sage.structure.element import parent
+from sage.symbolic.all import pi, e
+from estimator.estimator import Param, stddevf
 
 
 def gen_fhe_instance(n, q, alpha=None, h=None, m=None, seed=None):
@@ -27,7 +29,7 @@ def gen_fhe_instance(n, q, alpha=None, h=None, m=None, seed=None):
     if alpha is None:
         alpha = ZZ(8)/q
 
-    n, alpha, q = preprocess_params(n, alpha, q)
+    n, alpha, q = Param.preprocess(n, alpha, q)
 
     stddev = stddevf(alpha*q)
 
@@ -51,7 +53,7 @@ def gen_fhe_instance(n, q, alpha=None, h=None, m=None, seed=None):
     for i in range(m):
         c[i] += D()
 
-    return A, c
+    return A, c, s
 
 
 def dual_instance0(A):
@@ -134,16 +136,14 @@ def log_var(X):
     return log(variance(X).sqrt(), 2)
 
 
-def dim_error_tradeoff(A, c, beta, h, tau, k, m=None, scale=1, float_type="double"):
+def silke(A, c, beta, h, m=None, scale=1, float_type="double"):
     """
 
     :param A:    LWE matrix
     :param c:    LWE vector
     :param beta: BKW block size
-    :param m:    number of given LWE samples
-    :param tau:  number of new samples to generate
+    :param m:    number of samples to consider
     :param scale: scale rhs of lattice by this factor
-    :param k:    LWE dim after tradeoff
 
     """
     from fpylll import BKZ, IntegerMatrix, LLL, GSO
@@ -151,8 +151,6 @@ def dim_error_tradeoff(A, c, beta, h, tau, k, m=None, scale=1, float_type="doubl
 
     if m is None:
         m = A.nrows()
-
-    A1 = concatenate(A, n-k)
 
     L = dual_instance1(A, scale=scale)
     L = IntegerMatrix.from_matrix(L)
@@ -166,184 +164,52 @@ def dim_error_tradeoff(A, c, beta, h, tau, k, m=None, scale=1, float_type="doubl
                       max_loops=16,
                       flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
     bkz(param)
-    t += bkz.stats.total_time
+    #t += bkz.stats.total_time
 
     H = copy(L)
 
-    # import pickle
-    # pickle.dump(L, open("L-%d-%d.sobj"%(L.nrows, beta), "wb"))
+    import pickle
+    pickle.dump(L, open("L-%d-%d.sobj"%(L.nrows, beta), "wb"))
 
-    # E = []
-    E = matrix(K, tau, k)
-    f = vector(K, tau)
+    E = []
     Y = set()
-    # V = set()
+    V = set()
     y_i = vector(ZZ, tuple(L[0]))
     Y.add(tuple(y_i))
+    E.append(apply_short1(y_i, A, c, scale=scale)[1])
 
-    E[0], f[0] = apply_short1(y_i, A, c, scale=scale)
+    v = L[0].norm()
+    v_ = v/sqrt(L.ncols)
+    v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
+    v_l = sqrt(h)*v_
 
-    #v = L[0].norm()
-    #v_ = v/sqrt(L.ncols)
-    #v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
-    #v_l = sqrt(h)*v_
+    fmt = u"{\"t\": %5.1fs, \"log(sigma)\": %5.1f, \"log(|y|)\": %5.1f, \"log(E[sigma]):\" %5.1f}"
 
-    # fmt = u"{\"t\": %5.1fs, \"log(sigma)\": %5.1f, \"log(|y|)\": %5.1f, \"log(E[sigma]):\" %5.1f}"
-
-    #print
-    #print fmt%(t,
-    #           log(abs(E[-1]), 2),
-    #           log(L[0].norm(), 2),
-    #           log(sqrt(v_r**2 + v_l**2), 2))
-    #print
-    for i in range(1, tau):
-        #t = cputime()
+    print
+    print fmt%(t,
+               log(abs(E[-1]), 2),
+               log(L[0].norm(), 2),
+               log(sqrt(v_r**2 + v_l**2), 2))
+    print
+    for i in range(m):
+        t = cputime()
         M = GSO.Mat(L, float_type=float_type)
         bkz = BKZ2(M)
-        #t = cputime()
-        bkz.randomize_block(0, L.nrows, stats=None, density=3)
+        t = cputime()
+        bkz.randomize_block(0, L.nrows, density=3)
         LLL.reduction(L)
         y_i = vector(ZZ, tuple(L[0]))
         l_n = L[0].norm()
         if L[0].norm() > H[0].norm():
             L = copy(H)
-        #t = cputime(t)
+        t = cputime(t)
 
         Y.add(tuple(y_i))
-        # V.add(y_i.norm())
-        E[i], f[i] = apply_short1(y_i, A, c, scale=scale)
-        #if len(V) >= 2:
-        #    fmt =  u"{\"i\": %4d, \"t\": %5.1fs, \"log(|e_i|)\": %5.1f, \"log(|y_i|)\": %5.1f,"
-        #    fmt += u"\"log(sigma)\": (%5.1f,%5.1f), \"log(|y|)\": (%5.1f,%5.1f), |Y|: %5d}"
-        #    print fmt%(i+2, t, log(abs(E[-1]), 2), log(l_n, 2), log_mean(E), log_var(E), log_mean(V), log_var(V), len(Y))
+        V.add(y_i.norm())
+        E.append(apply_short1(y_i, A, c, scale=scale)[1])
+        if len(V) >= 2:
+            fmt =  u"{\"i\": %4d, \"t\": %5.1fs, \"log(|e_i|)\": %5.1f, \"log(|y_i|)\": %5.1f,"
+            fmt += u"\"log(sigma)\": (%5.1f,%5.1f), \"log(|y|)\": (%5.1f,%5.1f), |Y|: %5d}"
+            print fmt%(i+2, t, log(abs(E[-1]), 2), log(l_n, 2), log_mean(E), log_var(E), log_mean(V), log_var(V), len(Y))
 
-    return E, f
-
-def generate_table(S):    
-
-    T = {} # empty dictionary
-
-    for v in S:
-        sgnvec = power(sgn(v)) # dictionary의 key 부분이 무지막지하게 (2^tau 수준) 커져도 괜찮나?
-        if sgnvec in T:
-            T[sgnvec].append(v)
-        else:
-            T[sgnvec] = []
-            T[sgnvec].append(v)
-
-    return T
-
-def noisy_search(q, T, bound, query):
-        
-    tau = len(query)
-    sgn_ = []
-    index = []
-    for i in range(tau):
-        if bound < abs(query[i]) < q//2 - bound:
-            sgn_.append(query[i] // (q//2)) # 0 if query[i] is negative / 1 otherwise
-        else:
-            sgn_.append(1) # 1 if query[i] is a "bad case"
-            index.append(i)
-
-    return check_collision(sgn_, T, index, 0)
-
-def check_collision(v, T, index, index_num):
-    '''
-
-    :Param index:       A set of positions marked by 1 ( x in paper )
-    :Param index_num:   Current position where check_collision is
-
-    '''
-
-    if index_num == len(index): 
-        if power(v) in T:
-            for vec in T[v]:
-                if max_norm(query - vec) <= bound:
-                    return vec
-
-    else:
-        for i in [0, 1]:
-            v[index[index_num]] = i
-            vec = check_collision(v, T, index, index_num + 1)
-            if vec is not None:
-                return vec
-            
-
-def hybrid_mitm(A, c, beta, h, tau, k, ell, m=None, scale=1, float_type="double"):
-    
-    # Lattice reduction stage
-    E, f = dim_error_tradeoff(A, c, beta, h, m, tau, scale, float_type, k)
-
-    # MITM stage
-    S = data_gen(E, ell)
-
-    T = generate_table(S, tau) # T : binary table sgn(S)
-
-    for query in S:
-        res = noisy_search(q, T, bound, f - query)
-        if res != None:
-            return True
-
-    return False
-
-def data_gen(A, ell):
-    k = A.ncols()
-    TMP = set()
-    for i in range(k):     
-        for v in TMP:
-            if v[1] < ell:
-                tmp = v
-                tmp[0] += A[i]
-                tmp[1] += 1
-                TMP.add(tmp)
-        TMP.add([A[i],1])
-                 
-    S = set()
-    for v in TMP:
-        S.add(v[0])
-                 
-        # data_recursive(A, S, s, 0, ell, 0)
-    return S
-
-'''def data_recursive(A, S, s, position, ell, num_one):
-    # FIXME
-    if position < len(s) and num_one <= ell :
-        s[position] = 0
-        data_recursive(A, S, s, position + 1, ell)
-
-        s[position] = 1
-        num_one += 1
-        S.add(A[position])
-        for v in S:
-            S.add(v + A[position])
-        data_recursive(A, S, s, position + 1, ell + 1)   '''     
-
-def concatenate(A, k):
-    m = A.nrows()
-    A1 = matrix(ZZ, m, k)
-    for i in range(k):
-        A1[i] = A[i]
-    return A1
-
-def max_norm(v):
-    length = len(v)
-    max = v[0]
-    for i in range(1, length):
-        if max < v[i]:
-            max = v[i]
-    return max
-
-def sgn(v):
-    length = len(v)
-    bin = []
-    for i in range(length):
-        bin.append()
-        bin[i] = query[i] // (q//2)
-    return bin
-
-def power(v):
-    length = len(v)
-    pow = v[0]
-    for i in range(1, length):
-        pow += 2**i * v[i]
-    return pow
+    return E

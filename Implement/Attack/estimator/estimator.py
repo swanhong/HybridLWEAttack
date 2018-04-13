@@ -2371,7 +2371,7 @@ def _dual(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.99,
 
     """
 
-    n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability)
+    n, alpha, q, success_probability = Param(n, alpha, q, success_probability)
 
     if m < 1:
         raise InsufficientSamplesError("m=%d < 1"%m)
