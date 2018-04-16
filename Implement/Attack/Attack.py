@@ -136,7 +136,7 @@ def log_var(X):
     return log(variance(X).sqrt(), 2)
 
 
-def silke(A, c, beta, h, m=None, scale=1, float_type="double"):
+def silke(A, c, beta, h, m = None, float_type="double"):
     """
 
     :param A:    LWE matrix
@@ -152,6 +152,9 @@ def silke(A, c, beta, h, m=None, scale=1, float_type="double"):
     if m is None:
         m = A.nrows()
 
+    scale = round(8 * sqrt(m) / sqrt(2*pi*h))
+	scale = ZZ(scale)
+    
     L = dual_instance1(A, scale=scale)
     L = IntegerMatrix.from_matrix(L)
     L = LLL.reduction(L, flags=LLL.VERBOSE)
@@ -164,12 +167,12 @@ def silke(A, c, beta, h, m=None, scale=1, float_type="double"):
                       max_loops=16,
                       flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
     bkz(param)
-    t += bkz.traces.data.items()[0][1] # bkz time
+    t += bkz.trace.data.items()[0][1] # bkz time
 
     H = copy(L)
 
-    import pickle
-    pickle.dump(L, open("L-%d-%d.sobj"%(L.nrows, beta), "wb"))
+    # import pickle
+    # pickle.dump(L, open("L-%d-%d.sobj"%(L.nrows, beta), "wb"))
 
     E = []
     Y = set()
@@ -209,7 +212,7 @@ def silke(A, c, beta, h, m=None, scale=1, float_type="double"):
         E.append(apply_short1(y_i, A, c, scale=scale)[1])
         if len(V) >= 2:
             fmt =  u"{\"i\": %4d, \"t\": %5.1fs, \"log(|e_i|)\": %5.1f, \"log(|y_i|)\": %5.1f,"
-            fmt += u"\"log(sigma)\": (%5.1f,%5.1f), \"log(|y|)\": (%5.1f,%5.1f), |Y|: %5d}"
+            fmt += u" \"log(sigma)\": (%5.1f,%5.1f), \"log(|y|)\": (%5.1f,%5.1f), |Y|: %5d}"
             print fmt%(i+2, t, log(abs(E[-1]), 2), log(l_n, 2), log_mean(E), log_var(E), log_mean(V), log_var(V), len(Y))
 
     return E

@@ -30,19 +30,26 @@ def dual_instance0(A):
 
 def dual_instance1(A, scale=1):
     """
+    FIXME : m != n 인 경우에 해결하기
+
     Generate dual attack basis for LWE normal form.
 
     :param A: LWE matrix A
-
     """
     q = A.base_ring().order()
     n = A.ncols()
-    B = A.matrix_from_rows(range(0, n)).inverse().change_ring(ZZ)
-    L = identity_matrix(ZZ, n).augment(B)
-    L = L.stack(matrix(ZZ, n, n).augment(q*identity_matrix(ZZ, n)))
+    m = A.nrows()
+    B = A.matrix_from_rows(range(m-n, m)).inverse().change_ring(ZZ)
+    L = identity_matrix(ZZ, n).augment(matrix(ZZ,n,m-n))
+    L = L.augment(B)
 
-    for i in range(0, 2*n):
-        for j in range(n, 2*n):
+    L = L.stack(matrix(ZZ, m-n, n).augment(A.left_kernel().basis_matrix().change_ring(ZZ)))
+    
+
+    L = L.stack(matrix(ZZ, n, m).augment(q*identity_matrix(ZZ, n)))
+
+    for i in range(0, m + n):
+        for j in range(n, m + n):
             L[i, j] = scale*L[i, j]
 
     return L
@@ -91,7 +98,7 @@ def log_var(X):
     return log(variance(X).sqrt(), 2)
 
 
-def dim_error_tradeoff(A, c, beta, h, tau, k, m=None, scale=1, float_type="double"):
+def dim_error_tradeoff(A, c, beta, h, k, s, num_sample = None, float_type="double"):
     """
 
     :param A:    LWE matrix
@@ -106,75 +113,66 @@ def dim_error_tradeoff(A, c, beta, h, tau, k, m=None, scale=1, float_type="doubl
     from fpylll import BKZ, IntegerMatrix, LLL, GSO
     from fpylll.algorithms.bkz2 import BKZReduction as BKZ2
 
-    if m is None:
-        m = A.nrows()
+    n = A.ncols()
+    q = A.base_ring().order()
+    K = GF(q, proof=False)
 
-    A1 = concatenate(A, n-k)
+    scale = round(8 * sqrt(n) / sqrt(2*pi*h))
+    scale = ZZ(scale)
 
-    L = dual_instance1(A, scale=scale)
+    A1 = A.matrix_from_columns([i for i in range(n - k)])
+    
+    L = dual_instance1(A1, scale=scale)
     L = IntegerMatrix.from_matrix(L)
     L = LLL.reduction(L, flags=LLL.VERBOSE)
     M = GSO.Mat(L, float_type=float_type)
     bkz = BKZ2(M)
-    t = 0.0
     param = BKZ.Param(block_size=beta,
                       strategies=BKZ.DEFAULT_STRATEGY,
                       auto_abort=True,
                       max_loops=16,
                       flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
     bkz(param)
-    t += bkz.stats.total_time
-
+    
     H = copy(L)
-
-    # import pickle
-    # pickle.dump(L, open("L-%d-%d.sobj"%(L.nrows, beta), "wb"))
-
-    # E = []
-    E = matrix(K, tau, k)
-    f = vector(K, tau)
-    Y = set()
-    # V = set()
+    A = A.matrix_from_columns([n - k + i for i in range(k)])
+	
+    E = matrix(ZZ, 1, k)
+    f = []
+    V = set()
     y_i = vector(ZZ, tuple(L[0]))
-    Y.add(tuple(y_i))
+    E[0], ft = apply_short1(y_i, A, c, scale=scale)
+    f.append(ft)
+    	
+    if num_sample is None:
+    	num_sample = 15
 
-    E[0], f[0] = apply_short1(y_i, A, c, scale=scale)
-
-    #v = L[0].norm()
-    #v_ = v/sqrt(L.ncols)
-    #v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
-    #v_l = sqrt(h)*v_
-
-    # fmt = u"{\"t\": %5.1fs, \"log(sigma)\": %5.1f, \"log(|y|)\": %5.1f, \"log(E[sigma]):\" %5.1f}"
-
-    #print
-    #print fmt%(t,
-    #           log(abs(E[-1]), 2),
-    #           log(L[0].norm(), 2),
-    #           log(sqrt(v_r**2 + v_l**2), 2))
-    #print
-    for i in range(1, tau):
-        #t = cputime()
+    while len(V) < num_sample:
         M = GSO.Mat(L, float_type=float_type)
         bkz = BKZ2(M)
-        #t = cputime()
-        bkz.randomize_block(0, L.nrows, stats=None, density=3)
+        bkz.randomize_block(0, L.nrows, density=5)
         LLL.reduction(L)
         y_i = vector(ZZ, tuple(L[0]))
         l_n = L[0].norm()
         if L[0].norm() > H[0].norm():
             L = copy(H)
-        #t = cputime(t)
 
-        Y.add(tuple(y_i))
-        # V.add(y_i.norm())
-        E[i], f[i] = apply_short1(y_i, A, c, scale=scale)
-        #if len(V) >= 2:
-        #    fmt =  u"{\"i\": %4d, \"t\": %5.1fs, \"log(|e_i|)\": %5.1f, \"log(|y_i|)\": %5.1f,"
-        #    fmt += u"\"log(sigma)\": (%5.1f,%5.1f), \"log(|y|)\": (%5.1f,%5.1f), |Y|: %5d}"
-        #    print fmt%(i+2, t, log(abs(E[-1]), 2), log(l_n, 2), log_mean(E), log_var(E), log_mean(V), log_var(V), len(Y))
+        count = len(V)
+        V.add(y_i.norm())
+        if count != len(V):
+        	print '|V| : ', len(V)
+    		Etmp, ftmp = apply_short1(y_i, A, c, scale=scale)
+        	E = E.stack(Etmp)
+        	f.append(ftmp)
 
-    return E, f
+    E = E.change_ring(K)
+    f = vector(K, f)
+    e = vector(f - E * s, ZZ)
+    e = balanced_lift(e)
+    B = max_norm(e)
+    print '|E| = ', E.nrows(), 'Bound = ', B
+
+    return E, f, B
 
 def generate_table(S, q):    
 
@@ -202,7 +200,6 @@ def noisy_search(q, T, bound, query):
     sys.stdout.write("\033[K")
 
     return v
-
 
 def sgn(v, q):
     length = len(v)
@@ -257,22 +254,18 @@ def check_collision(query, sgn_, T, index, index_num, bound):
                 return res
             
 
-'''def hybrid_mitm(A, c, beta, h, tau, k, ell, m=None, scale=1, float_type="double"):
-    
+def hybrid_mitm(A, c, beta, h, k, s, num_sample = None, ell = None, m=None, float_type="double"):
     # Lattice reduction stage
-    E, f = dim_error_tradeoff(A, c, beta, h, m, tau, scale, float_type, k)
+    E, f, bound = dim_error_tradeoff(A, c, beta, h, k, s, num_sample = num_sample)
 
+    if ell is None:
+    	ell = h
+
+	q = A.base_ring().order()
+	
     # MITM stage
-    S = data_gen(E, ell)
-
-    T = generate_table(S, q) # T : binary table sgn(S)
-
-    for query in S:
-        res = noisy_search(q, T, bound, f - query)
-        if res != None:
-            return True
-
-    return False'''
+    Mitm_on_LWE(E, f, bound, ell, q)
+    
 
 def data_gen(A, ell):
 
@@ -300,19 +293,6 @@ def data_gen(A, ell):
         S_.add(tuple(tmp))
     return S_
 
-'''def data_recursive(A, S, s, position, ell, num_one):
-    # FIXME
-    if position < len(s) and num_one <= ell :
-        s[position] = 0
-        data_recursive(A, S, s, position + 1, ell)
-
-        s[position] = 1
-        num_one += 1
-        S.add(A[position])
-        for v in S:
-            S.add(v + A[position])
-        data_recursive(A, S, s, position + 1, ell + 1)   '''     
-
 def max_norm(v):
     length = len(v)
     max = abs(v[0])
@@ -328,7 +308,7 @@ def power(v):
         pow += 2**i * v[i]
     return pow
 
-def fhe_experiment(A, c, bound, h, q):
+def Mitm_on_LWE(A, c, bound, h, q):
 
     if h % 2 == 0:
         halfh = h // 2
@@ -338,9 +318,8 @@ def fhe_experiment(A, c, bound, h, q):
     S = data_gen(A, halfh) # S = {As : Hw(s) <= ell}
     T = generate_table(S, q)
     is_LWE = False
-    count = 0
+
     for v in S:
-        count += 1
         print 'Working...'
 
         v = vector(ZZ, v)
@@ -358,17 +337,18 @@ def fhe_experiment(A, c, bound, h, q):
             #print 'query            :', query
             #print 'collision in S   :', res
             #print
-            s = solveLA(A, c, query, res, q)
-            s = vector(ZZ, s)
-            if max_norm(s) <= 1:
-                break
+            #s = solveLA(A, c, query, res, q)
+            #s = vector(ZZ, s)
+            #if max_norm(s) <= 1:
+            break
 
     
     if is_LWE == True:
-        print 'Input is LWE samples with secret s:'
-        print s
+    	print 'Input is from LWE samples'
+        #print 'Input is from LWE samples with secret s:'
+        #print s
     else:
-        print 'Input is NOT LWE samples'
+        print 'Input is NOT from LWE'
 
 def solveLA(A, c, query, res, q):
     n = A.rank()
@@ -411,7 +391,7 @@ def gen_instance(n, q, h, alpha=None, m=None, seed=None):
     #stddev = alpha*q/RR(sqrt(2*pi))
 
     if m is None:
-        m = 2 * n
+        m = n
     K = GF(q, proof=False)
 
     while 1:
@@ -435,7 +415,6 @@ def gen_instance(n, q, h, alpha=None, m=None, seed=None):
         c[i] += D()
 
     u = random_vector(K, m)
-    u = vector(ZZ, u)
 
     return A, c, u, s
     
