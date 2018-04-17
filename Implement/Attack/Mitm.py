@@ -81,7 +81,6 @@ def dual_instance0(A):
 
 def dual_instance1(A, scale=1):
     """
-    FIXME : m != n 인 경우에 해결하기
 
     Generate dual attack basis for LWE normal form.
 
@@ -172,10 +171,13 @@ def power(v):
 
 
 def sgn(v, q):
+
+	# v : ZZ vector represented in (0, q)
+
     length = len(v)
     bin = []
     for i in range(length):
-        if v[i] >= q//2:
+        if v[i] >= 0:
             bin.append(1)
         else:
             bin.append(0)
@@ -183,14 +185,17 @@ def sgn(v, q):
 
 
 def sgnvar(v, bound, q):
+
+	# v : ZZ vector represented in (-q/2, q/2)
+
     length = len(v)
     bin = []
     index = []
     
     for i in range(length):
-        tmp = abs(ZZ(v[i]) - q//2)
+        tmp = abs(v[i])
         if bound < tmp < q//2 - bound:
-            if ZZ(v[i]) >= q//2:
+            if ZZ(v[i]) >= 0:
                 bin.append(1)
             else:
                 bin.append(0)
@@ -201,15 +206,20 @@ def sgnvar(v, bound, q):
     return bin, index
 
 
-def dim_error_tradeoff(A, c, u, beta, h, k, s, num_sample = None, float_type="double", flag = False):
+def dim_error_tradeoff(A, c, u, beta, h, s, k, num_sample = None, float_type="double", use_lll = True):
     """
 
     :param A:    LWE matrix
     :param c:    LWE vector
+    :param u:	 Uniform vector
     :param beta: BKW block size
     :param h: 	 Hamming weight of secret
     :param k:    LWE dim after tradeoff
     :param num_sample:  number of new samples to generate
+    :param use_lll: 	If True, run BKZ only once and then run LLL
+    					If False, run BKZ iteratively
+
+    * secret vector s is used to see the error term of new LWE(-like) samples.
 
     """
 
@@ -231,64 +241,87 @@ def dim_error_tradeoff(A, c, u, beta, h, k, s, num_sample = None, float_type="do
     M = GSO.Mat(L, float_type=float_type)
     bkz = BKZ2(M)
     param = BKZ.Param(block_size=beta,
-    				  strategies=BKZ.DEFAULT_STRATEGY,
-    				  auto_abort=True,
-    				  max_loops=16,
-    				  flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
+                      strategies=BKZ.DEFAULT_STRATEGY,
+                      auto_abort=True,
+                      max_loops=16,
+                      flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
     bkz(param)
 
     print
-    print '** Generating low dim & high error LWE samples ** '
+    print '** Generating short vectors by LLL **'
     print
-    
     H = copy(L)
-    A = A.matrix_from_columns([n - k + i for i in range(k)])
-	
+    
+    A2 = A.matrix_from_columns([n - k + i for i in range(k)])
     E = matrix(ZZ, 1, k)
     f_c = []
     f_u = []
-    V = set()
+    Y = set()
     y_i = vector(ZZ, tuple(L[0]))
-    E[0], ft, ft2 = apply_short1(y_i, A, c, u, scale=scale)
+    E[0], ft, ft2 = apply_short1(y_i, A2, c, u, scale=scale)
     f_c.append(ft)
     f_u.append(ft2)
 
-    v = L[0].norm()
-    v_ = v/sqrt(L.ncols)
-    v_r = 3.2*sqrt(L.ncols - A.ncols())*v_/scale
-    v_l = sqrt(h)*v_
-
-    print 'Expected log(E[error]) = %5.1f' % (log(sqrt(v_r**2 + v_l**2), 2))
-
-    print 'Current |Y| : ', len(V)
-    	
-    if num_sample is None:
-    	num_sample = 30
+    y = L[0].norm()
+    y_ = y/sqrt(L.ncols)
+    y_r = 3.2*sqrt(L.ncols - A2.ncols())*y_/scale
+    y_l = sqrt(h)*y_
 
     count = 0
 
-    while len(V) < num_sample:
-    	count += 1
-    	M = GSO.Mat(L, float_type=float_type)
-    	bkz = BKZ2(M)
-    	bkz.randomize_block(0, L.nrows, density=3)
-    	LLL.reduction(L)
-    	y_i = vector(ZZ, tuple(L[0]))
-    	l_n = L[0].norm()
-    	if L[0].norm() > H[0].norm():
-    		L = copy(H)
+    print 'Expected log(E[error]) = %5.1f, BKZ vector log(||y_1||) = %5.1f' % (log(sqrt(y_r**2 + y_l**2), 2), log(y, 2))
+    print
+    print '# of LLL : %d, Current |Y| : %d' % (count, len(Y))
+    
+    if num_sample is None:
+        num_sample = 30
 
-    	sys.stdout.write("\033[F")
-    	sys.stdout.write("\033[K")
+    if use_lll is True:
+        while len(Y) < num_sample:
+            count += 1
+            M = GSO.Mat(L, float_type=float_type)
+            bkz = BKZ2(M)
+            bkz.randomize_block(0, L.nrows, density=3)
+            LLL.reduction(L)
+            y_i = vector(ZZ, tuple(L[0]))
+            if L[0].norm() > H[0].norm():
+                L = copy(H)
 
-    	flag = len(V)
-    	V.add(y_i.norm())
-    	if flag != len(V):
-    		Etmp, ftmp, ftmp2 = apply_short1(y_i, A, c, u, scale=scale)
-        	E = E.stack(Etmp)
-        	f_c.append(ftmp)
-        	f_u.append(ftmp2)
-    	print '# of LLL : %d, Current |Y| : %d' % (count, len(V))
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
+
+            tmp = len(Y)
+            Y.add(y_i.norm())
+            if tmp != len(Y):
+                Etmp, ftmp, ftmp2 = apply_short1(y_i, A2, c, u, scale=scale)
+                E = E.stack(Etmp)
+                f_c.append(ftmp)
+                f_u.append(ftmp2)
+            print '# of LLL : %d, Current |Y| : %d' % (count, len(Y))
+
+    else:
+        while len(Y) < num_sample:
+            count += 1
+            M = GSO.Mat(L, float_type=float_type)
+            bkz = BKZ2(M)
+            bkz.randomize_block(0, L.nrows, density=3)
+            bkz(param)
+            y_i = vector(ZZ, tuple(L[0]))
+            if L[0].norm() > H[0].norm():
+                L = copy(H)
+
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
+
+            tmp = len(Y)
+            Y.add(y_i.norm())
+            if tmp != len(Y):
+                Etmp, ftmp, ftmp2 = apply_short1(y_i, A2, c, u, scale=scale)
+                E = E.stack(Etmp)
+                f_c.append(ftmp)
+                f_u.append(ftmp2)
+
+            print '# of BKZ : %d, Current |Y| : %d' % (count, len(Y))
 
     E = E.change_ring(K)    
     f_c = vector(K, f_c)
@@ -297,24 +330,31 @@ def dim_error_tradeoff(A, c, u, beta, h, k, s, num_sample = None, float_type="do
     e = f_c - E * s
     e = balanced_lift(e)
 
-    bound = sqrt(v_r**2 + v_l**2)
+    # print e
 
-    print	
-    print 'log(E[error]) : (%5.1f, %5.1f), log(E[y_i]) = (%5.1f, %5.1f) ' \
-    	% (log_mean(e), log_stddev(e), log_mean(V), log_stddev(V))
+    bound = sqrt(y_r**2 + y_l**2)
+
+    print
+    print 'log(E[error]) : (%5.1f, %5.1f), log(E[||y_i||]) = (%5.1f, %5.1f) ' \
+        % (log_mean(e), log_stddev(e), log_mean(Y), log_stddev(Y))
 
     print
 
     return E, f_c, f_u, bound
 
 
-def generate_table(S, q):    
+def generate_table(S, q):   
+
+	# Generate (binary) hash table T induced from locality hash function 'sgn'
 
     print 'Generating table ... '
 
     T = {}
 
     for v in S:
+    	v = vector(ZZ, v)
+        for i in range(len(v)):
+        	if v[i] > q//2: v[i] -= q
         sgnvec = power(sgn(v, q))
         if sgnvec in T:
             T[sgnvec].append(v)
@@ -329,8 +369,15 @@ def generate_table(S, q):
 
 
 def noisy_search(q, T, bound, query):
+    
+    # Find v in S within distance 'bound' from query
+    # Input T is a hash table from S
+    # If no such v, return None
 
     sgn_, index = sgnvar(query, bound, q)
+
+    if len(index) == len(sgn_):
+        return [0] * len(sgn_)
 
     print ' - Current number of x in sgn\'(query) = ', len(index)
 
@@ -343,6 +390,14 @@ def noisy_search(q, T, bound, query):
 
 
 def check_collision(query, sgn_, T, index, index_num, bound):
+    '''
+
+	:param sgn_:	A ternary (-1,0,1) vector / See 'sgnvar' function
+	:param index:	The index set where sgn_(i) = -1
+	:param index_num:	A flag for recursive call which lies in (0, len(index))
+
+
+    '''
 
     if index_num == len(index): 
         if power(sgn_) in T:
@@ -363,42 +418,43 @@ def check_collision(query, sgn_, T, index, index_num, bound):
 def data_gen(A, ell):
 
 	# Generate a set S = {As : Hw(s) <= ell}
+	# FIXME : Seems to be improved.
 
     k = A.ncols()
     m = A.nrows()    
     A = transpose(A)
+    S_ = set()
     S = set()
     Count = vector(ZZ, [1] * k)
     A = A.augment(Count)
-    S.add(tuple([0] * (m+1)))
-    print 'Making a dataset S from YA_2 and ell...'
+    S_.add(tuple([0] * (m+1)))
+    S.add(tuple([0] * m))
+    print 'Making a dataset S = { YA_2 * s : HW(s) < ell }...'
 
     for i in range(k):
-    	print ' - Processing with ', i + 1, '-th dimension ... '
+        print ' - Processing with ', i + 1, '-th dimension ... '
+
         TMP = set()
-        TMP.add(tuple(A[i]))   
-        for v in S:
+        TMP2 = set()
+        for v in S_:
             if v[-1] < ell:
-                tmp = vector(ZZ, v)
-                TMP.add(tuple(tmp + A[i]))
-        S = S.union(TMP)
+                tmp = vector(ZZ, v) + A[i]
+                TMP.add(tuple(tmp))
+                tmp = tmp[:m]
+                TMP2.add(tuple(tmp))
+        S_ = S_.union(TMP)
+        S = S.union(TMP2)
 
-    	sys.stdout.write("\033[F")
+        sys.stdout.write("\033[F")
         sys.stdout.write("\033[K")
-
-    S_ = set()
-    for v in S:
-        tmp = vector(ZZ, v)
-        tmp = tmp[:m]
-        S_.add(tuple(tmp))
 
     print ' - Done'
     print
 
-    return S_
+    return S
 
 
-'''def solveLA(A, c, query, res, q):
+def solveLA(A, c, query, res, q):
     n = A.rank()
     error = query - res
     for i in range(len(error)):
@@ -415,65 +471,66 @@ def data_gen(A, ell):
     else:
         c = c[:n]
         return A_.inverse() * c
-'''
 
-def Mitm_on_LWE(A, c, u, bound, h, q, flag = False):
 
-	# Solve LWE on input (A, c) with error bound 'bound'
-	# h = HammingWeight(s)
+def Mitm_on_LWE(A, c, u, bound, ell, check_unif = False):
 
-    if h % 2 == 0:
-        halfh = h // 2
+	# Solve LWE on input (A, c) with error bound 'bound' by Mitm strategy
+	# check_unif flag : whether try with input (A,u)
+
+    q = A.base_ring().order()
+    K = GF(q, proof = False)
+
+    if ell % 2 == 0:
+        half = ell // 2
     else:
-        halfh = h // 2 + 1
+        half = ell // 2 + 1
 
-    S = data_gen(A, halfh) 
+    S = data_gen(A, half) 
     T = generate_table(S, q)
     is_LWE = False
 
     print '** Mitm with (YA_2, Yc) ** '
 
     for v in S:
-        v = vector(ZZ, v)
-        c = vector(ZZ, c)
+        v = vector(K, v)
         query = c - v
-    	        
-        for i in range(len(query)):
-            if query[i] < 0: query[i] += q
+        query = balanced_lift(query)
+    	
         res = noisy_search(q, T, bound, query)
 
         if res is not None:
             is_LWE = True
-            #print 'query            :', query
-	        #print 'collision in S   :', res
-	        #print
-	        #s = solveLA(A, c, query, res, q)
-	        #s = vector(ZZ, s)
-	        #if max_norm(s) <= 1:
+            if A.nrows() >= A.ncols():
+                print 'query            :', query
+                print 'collision in S   :', res
+                print
+                s = solveLA(A, c, query, res, q)
+                s = vector(ZZ, s)
             break
 	
     if is_LWE == True:
-        print ' - Input is LWE'
-	    #print 'Input is from LWE samples with secret s:'
-	    #print s
+        if A.nrows() < A.ncols():
+            print ' - Input is LWE'
+        else:
+            print 'Input is from LWE samples with secret s:'
+            print s
 
     else:
         print ' - Input is uniform'
 
 
-    if flag is True:
+    if check_unif is True:
     	print
     	print '** Mitm with (YA_2, Yu) **'
 
     	is_LWE = False
 
     	for v in S:
-            v = vector(ZZ, v)
-            c = vector(ZZ, c)
+            v = vector(K, v)
             query = u - v
-		        
-            for i in range(len(query)):
-                if query[i] < 0: query[i] += q
+            query = balanced_lift(query)
+
             res = noisy_search(q, T, bound, query)
 
     	    if res is not None:
@@ -495,20 +552,131 @@ def Mitm_on_LWE(A, c, u, bound, h, q, flag = False):
             print ' - Input is uniform'
    
 
-def hybrid_mitm(A, c, u, beta, h, k, s, num_sample = None, ell = None, m=None, float_type="double", flag = False):
+def hybrid_mitm(A, c, u, beta, h, s, k, num_sample = None, ell = None, float_type="double", check_unif = False):
     
     # if flag = False, then don't check for uniform vector u
 
     # Lattice reduction stage
-    E, f_c, f_u, bound = dim_error_tradeoff(A, c, u, beta, h, k, s, num_sample = num_sample, flag = flag)
+    E, f_c, f_u, bound = dim_error_tradeoff(A, c, u, beta, h, s, k, num_sample = num_sample, float_type=float_type)
+
+    print 'Bound setting = %5.2f, q = %d' %(sqrt(2*pi) * 2 * bound, A.base_ring().order())
+    print
 
     if ell is None:
     	ell = h
-
-	q = A.base_ring().order()
 	
     # MITM stage
-    Mitm_on_LWE(E, f_c, f_u, 4 * bound, ell, q, flag = flag)
+    Mitm_on_LWE(E, f_c, f_u, sqrt(2*pi) * 2 * bound, ell, check_unif = check_unif)
     
+
+
+def silke(A, c, beta, h, max_loops = 16, num_sample = None, float_type="double", use_lll = True):
+    """
+
+    :param A:    LWE matrix
+    :param c:    LWE vector
+    :param beta: BKW block size
+    :param h: 	 Hamming weight of secret
+    :param k:    LWE dim after tradeoff
+    :param num_sample:  number of new samples to generate
+
+    """
+
+    from fpylll import BKZ, IntegerMatrix, LLL, GSO
+    from fpylll.algorithms.bkz2 import BKZReduction as BKZ2
+
+    n = A.ncols()
+    q = A.base_ring().order()
+    K = GF(q, proof=False)
+
+    scale = round(8 * sqrt(n) / sqrt(2*pi*h))
+    scale = ZZ(scale)
+    
+    L = dual_instance1(A, scale=scale)
+    L = IntegerMatrix.from_matrix(L)
+
+    L1 = copy(L)
+    L1 = LLL.reduction(L1, flags=LLL.VERBOSE)
+    M = GSO.Mat(L1, float_type=float_type)
+    bkz = BKZ2(M)
+    param = BKZ.Param(block_size=beta,
+    				  strategies=BKZ.DEFAULT_STRATEGY,
+    				  auto_abort=True,
+    				  max_loops=max_loops,
+    				  flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
+    bkz(param)
+    
+    H = copy(L1)
+    
+    f_c = []
+    V = set()
+    y_i = vector(ZZ, tuple(L[0]))
+    ft = apply_short1(y_i, A, c, scale=scale)[1]
+    f_c.append(ft)
+
+    v = L1[0].norm()
+    v_ = v/sqrt(L1.ncols)
+    v_r = 3.2*sqrt(L1.ncols - A.ncols())*v_/scale
+    v_l = sqrt(h)*v_
+
+    print 'Expected log(E[error]) = %5.1f, BKZ vector log(||y_1||) = %5.1f' % (log(sqrt(v_r**2 + v_l**2), 2), log(v, 2))
+
+    print 'Current |Y| : ', len(V)
+    	
+    if num_sample is None:
+    	num_sample = 30
+
+    count = 0
+    if use_lll is True:
+    	while len(V) < num_sample:
+    		count += 1
+    		M = GSO.Mat(L, float_type=float_type)
+    		bkz = BKZ2(M)
+    		bkz.randomize_block(0, L.nrows, density=5)
+    		LLL.reduction(L)
+    		y_i = vector(ZZ, tuple(L[0]))
+    		if L[0].norm() > H[0].norm():
+    			L = copy(H)
+
+    		sys.stdout.write("\033[F")
+    		sys.stdout.write("\033[K")
+
+    		flag = len(V)
+    		V.add(y_i.norm())
+    		if flag != len(V):
+    			ftmp = apply_short1(y_i, A, c, scale=scale)[1]
+        		f_c.append(ftmp)
+    		print '# of LLL : %d, Current |Y| : %d' % (count, len(V))
+
+    else:
+    	while len(V) < num_sample:
+    		count += 1
+    		M = GSO.Mat(L, float_type=float_type)
+    		bkz = BKZ2(M)
+    		bkz.randomize_block(0, L.nrows, density=3)
+    		bkz(param)
+    		y_i = vector(ZZ, tuple(L[0]))
+    		if L[0].norm() > H[0].norm():
+    			L = copy(H)
+
+    		sys.stdout.write("\033[F")
+    		sys.stdout.write("\033[K")
+
+    		flag = len(V)
+    		V.add(y_i.norm())
+    		if flag != len(V):
+    			ftmp = apply_short1(y_i, A, c, scale=scale)[1]
+        		f_c.append(ftmp)
+    		print '# of BKZ : %d, Current |Y| : %d' % (count, len(V))
+
+
+    print	
+    print 'log(E[error]) : (%5.1f, %5.1f), log(E[||y_i||]) = (%5.1f, %5.1f) ' \
+    	% (log_mean(f_c), log_stddev(f_c), log_mean(V), log_stddev(V))
+
+    print
+
+    return f_c
+
 
     
