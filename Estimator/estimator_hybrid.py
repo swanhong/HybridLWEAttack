@@ -103,9 +103,9 @@ def drop_and_solve_hyb(f, n, alpha, q, bound, secret_distribution=True, success_
             if cost_mem != 0:
                 cost_post += cost_mem * log(cost_mem, 2) * (2 ** (repeat * 4 * B / q))
 
-        current["rop"] = cost_lat + cost_post
+        current["rop"] = (cost_lat + cost_post) / probability
         current["post"] = cost_post
-        current = current.repeat(1 / probability, select={"m": False})
+        # current = current.repeat(1 / probability, select={"m": False})
         current["k"] = k
         current["postprocess"] = postprocess
         current["mem"] = cost_mem
@@ -133,6 +133,8 @@ def drop_and_solve_hyb(f, n, alpha, q, bound, secret_distribution=True, success_
 
         if step_size == 0:
             break
+
+    print("Exact k", str(k))
     return best
 
 def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, success_probability=0.99,
@@ -183,6 +185,7 @@ def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, succe
         cost_post = 0
         cost_mem = 0
         mitm_num = 0
+        total_post_cost = 0
 
         if postprocess:
 
@@ -219,8 +222,8 @@ def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, succe
                 # print("l1 = " + str(l1))
                 l2 = k - l1
                 
-                mem_bound = 2 ** 80
-                B = 4 * alpha * q * q / (2 ** bound)
+                mem_bound = 2 ** 100
+                B = 2 * alpha * q * q / (2 ** bound)
 
                 h1 = 0
                 h1_best = 0
@@ -229,7 +232,7 @@ def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, succe
 
                 cost_tableConstruct = 0
                 
-                cost_best_h1 = 0
+                cost_best_h1 = cost_best_l1
                 
                 while h1 < l1: # do for h1
                     h1 += 1
@@ -238,13 +241,12 @@ def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, succe
                     candidates_i = binomial(l1, h1) * (b-a) ** h1
                     cost_mem_i = repeat * candidates_i # bits
                     
-
                     if cost_mem + cost_mem_i > mem_bound:
                         h1 -= 1
                         break
-                    
-                    cost_mem += cost_mem_i
 
+                    cost_mem += cost_mem_i
+                    
                     # Computation of As1 for HW = i
                     # Computing As1 : for each s1, pick i columns of A and do i number of vector sum.
                     # c - As1 : tau times
@@ -253,7 +255,8 @@ def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, succe
 
                     cost_query = 0
 
-                    cost_best_h2 = 0
+                    cost_best_h2 = cost_best_h1
+
                     while cost_query <= cost_tableConstruct and h2 <= l2:
                         h2 += 1
                         cost_query += binomial(l2, h2) * (b-a)**h2 * ( h2 * repeat )
@@ -267,7 +270,8 @@ def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, succe
                                 if k > i + j:
                                     probability += (binomial(n - l1 - l2, h - i - j) * binomial(l1, i) * binomial(l2, j)) / C
                         
-                        total_cost = (cost_tableConstruct + cost_query + cost_lat) / probability
+                        total_post_cost = cost_tableConstruct + cost_query
+                        total_cost = (total_post_cost + cost_lat) / probability
 
                         if cost_best_h2 is 0 or total_cost < cost_best_h2:
                             h2_best = h2
@@ -280,9 +284,9 @@ def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, succe
                     # print("table construct", int(log(cost_tableConstruct, 2)))
                     # print("query", int(log(cost_query, 2)))
                     # print("prob", int(log(probability, 2)))
-                    if cost_best_h1 is 0 or total_cost < cost_best_h1:
+                    if cost_best_h1 is 0 or cost_best_h2 < cost_best_h1:
                         h1_best = h1
-                        cost_best_h1 = total_cost
+                        cost_best_h1 = cost_best_h2
 
                 h1 = h1_best
                 h2 = h2_best
@@ -311,14 +315,14 @@ def drop_and_solve_hybOpt(f, n, alpha, q, bound, secret_distribution=True, succe
             l1 = l1_best
             l2 = k - l1
             
-        cost_post += cost_best_l1
+        cost_post = total_post_cost
 
-        current["rop"] = cost_lat + cost_post
+        current["rop"] = (cost_lat + cost_post) / probability
         current["post"] = cost_post
         # current = current.repeat(1 / probability, select={"m": False})
-        current = current.repeat(1, select={"m": False})
+        # current = current.repeat(1, select={"m": False})
         current["k"] = k
-        current["postprocess"] = postprocess
+        current["postprocess"] = h1 + h2
         current["mem"] = cost_mem
         # current["l2"] = query_HW
         current = current.reorder(["rop"])
