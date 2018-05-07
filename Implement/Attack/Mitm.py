@@ -471,14 +471,13 @@ def data_gen(A, ell):
 
 
 def solveLA(A, c, query, res, q):
+
+    query = vector(ZZ, query)
+    res = vector(ZZ, res)
     n = A.rank()
     error = query - res
-    for i in range(len(error)):
-        if error[i] < 0: error[i] += q
 
     c -= error
-    for i in range(len(c)):
-        if c[i] < 0: c[i] += q
     c = vector(GF(q, proof=False), c)
 
     A_ = A.matrix_from_rows([i for i in range(n)])
@@ -589,7 +588,7 @@ def hybrid_mitm_(n, q, beta, h, k, alpha = None, tau = None, ell = None, float_t
     f_c = f_c.list()
     f_u = f_u.list()
 
-    print s
+    print s[tau:]
 
     for i in range(1, tau):
         print 'Generating ...' 
@@ -610,10 +609,6 @@ def hybrid_mitm_(n, q, beta, h, k, alpha = None, tau = None, ell = None, float_t
 
     # MITM stage
     Mitm_on_LWE(E, f_c, f_u, sqrt(2*pi) * 2 * bound, ell, check_unif = check_unif)
-
-
-    
-
 
 def silke(A, c, beta, h, max_loops = 16, num_sample = None, float_type="double", use_lll = True):
     """
