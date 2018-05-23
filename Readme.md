@@ -13,4 +13,4 @@ EXAMPLE :\
     * sage: n = 8192\
     * sage: q = next_prime(2^125)\
     * sage: alpha = 8 / q\
-    * sage: MITM_estimator(n, alpha, q, 11, 13)
+    * sage: MITM_estimator(n, alpha, q)
