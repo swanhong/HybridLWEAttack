@@ -1,6 +1,6 @@
 from estimator import *
 
-def drop_and_solve_hyb(f, n, alpha, q, bound, secret_distribution=True, **kwds):
+def hyb_estimate(f, n, alpha, q, bound, secret_distribution=True, **kwds):
     '''
     * Input 'bound' means,
     the lattice reduction will finds short vectors of (log) size < 'log(q) - bound'.
@@ -17,6 +17,7 @@ def drop_and_solve_hyb(f, n, alpha, q, bound, secret_distribution=True, **kwds):
     '''
 
     best = None
+    best_k = None
     
     # too small a step size leads to an early abort, too large a step
     # size means stepping over target
@@ -41,109 +42,73 @@ def drop_and_solve_hyb(f, n, alpha, q, bound, secret_distribution=True, **kwds):
         cost_post = 0
         cost_mem = 0
         mitm_num = 0
+        best_h1 = None
 
-        l1 = k / 2
-        #l1_best = 0
-        #step_size_l1 = k / 16
-            
-        cost_best_l1 = 0
-
-
-        l2 = k - l1                
-        mem_bound = 2 ** 80 # We bound the memory capacity for MITM by 2**80.
-        h1 = 6
-        h1_best = 0
-        h2_best = 0
-        h2_h1_best = 0
-        mem_h1_best = 0
-                
-        cost_best_h1 = cost_best_l1
+        k1 = k / 2
+        k2 = k - k1             # Divide the matrix equally.      
+        mem_bound = 2 ** 80     # Bound the memory capacity for MITM by 2**80.
+        h1 = 5
 
         sum_of_candidates = 0
 
-        while h1 < l1:
-            h1 += 1
-            repeat = 0                                
-            cost_best_h2 = cost_best_h1
-            mem_h2_best = 0
+        while h1 < k1: 
+            h2 = 5
 
-            flag = True
-            h2 = 8          
-
-            while h2 <= l2 and h2 <= h1 + 5:
-                h2 += 1
-                current = f(n - k, alpha, q, bound, l1, l2, h1, h2, secret_distribution=secret_distribution, **kwds)
-                cost_lat = current.values()[0] 
-                repeat = current["repeat"]                     
-
+            while h2 <= k2 and h2 <= h1 + 4:
+                current = f(n - k, alpha, q, bound, k1, k2, h1, h2, secret_distribution=secret_distribution, **kwds)
+                cost_lat = current["red"] 
+                repeat = current["repeat"]               
+                                 
                 cost_tableConstruct = 0
                 for i in range(1, h1 + 1):
-                    cost_tableConstruct += binomial(l1, i) * (b-a) ** i * ( i * repeat + repeat)
+                    cost_tableConstruct += binomial(k1, i) * (b-a) ** i * ( i * repeat + repeat)
 
                 cost_query = 0
                 for j in range(1, h2 + 1):
-                    cost_query += binomial(l2, j) * (b-a)**j * ( 2 ** (repeat * 4 * B / q) )                    
+                    cost_query += binomial(k2, j) * (b-a)**j * ( 2 ** (repeat * 4 * B / q) )                    
 
                 probability = 0
                 for i in range(0, h1 + 1):
                     for j in range(0, h2 + 1):
-                        probability += (binomial(n - l1 - l2, h - i - j) * binomial(l1, i) * binomial(l2, j)) / C
-                        
+                        probability += (binomial(n - k1 - k2, h - i - j) * binomial(k1, i) * binomial(k2, j)) / C
+                    
                 cost_post = cost_tableConstruct + cost_query
 
                 total_cost = (cost_post + cost_lat) / probability
 
-                mem = 0
-                for i in range(0, h1 + 1):
-                    mem += repeat * binomial(l1, i) * (b-a) ** i # bits
-                    if mem > mem_bound:
-                        mem -= repeat * binomial(l1, i) * (b-a) ** i
-                    
-                if cost_best_h2 is 0 or total_cost < cost_best_h2:
-                    h2_best = h2
-                    cost_best_h2 = total_cost
-                    mem_h2_best = mem
-                    
-                if cost_query > cost_lat:
+                current["rop"] = total_cost
+                current["post"] = cost_post
+                current["prob_inv"] = int(1/probability)
+                current["k"] = k
+                current["h1"] = h1
+                current["h2"] = h2
+                current = current.reorder(["rop"])
+
+                logging.getLogger("guess").debug(current)
+
+                if int(cost_query) > int(cost_lat):
                     #print 'mem = %5.1f, cost_tableConstruct = %5.1f, cost_query = %5.1f, cost_lat = %5.1f' % (log(mem,2), log(cost_tableConstruct,2),log(cost_query,2), log(cost_lat,2))
-                    h2 -= 1
                     break
+                
+                if best_h1 is None or current["rop"] < best_h1["rop"]:
+                    best_h1 = current
+                h2 += 1
 
-                #print("l1 = " + str(l1) + ", l2 = " + str(l2) + ", h1 = " + str(h1) + ", h2 = " + str(h2))
-                #print 'Total cost = %5.1f' % log(total_cost, 2)   
-
-            if cost_best_h1 is 0 or cost_best_h2 < cost_best_h1:
-                h1_best = h1
-                h2_h1_best = h2_best
-                cost_best_h1 = cost_best_h2
-                mem_h1_best = mem_h2_best
+            if best_k is None or best_h1["rop"] < best_k["rop"]:
+                best_k = best_h1
 
             for i in range(0, h1 + 1):
-                mem += repeat * binomial(l1, i) * (b-a) ** i # bits
-                if mem > mem_bound:
-                    mem -= repeat * binomial(l1, i) * (b-a) ** i     
-                    flag = False                       
+                cost_mem += best_k["repeat"] * binomial(k1, i) * (b-a) ** i # bits       
+                best_k["mem"] = cost_mem 
 
-            if flag is False:
+            if cost_mem + best_k["repeat"] * binomial(k1, h1 + 1) * (b-a) ** h1 > mem_bound:                
                 break
-            
-        current["rop"] = cost_best_h1
-        current["post"] = cost_post
-        current["k"] = k
-        current["postprocess"] = h1_best + h2_h1_best
-        current["mem"] = mem_h1_best
-        current = current.reorder(["rop"])
 
-        logging.getLogger("guess").debug(current)
-
-        key = list(current)[0]
-        if best is None:
-            best = current
-            k += step_size
-            continue
-
-        if current[key] < best[key]:
-            best = current
+            #print 'k = %4d, rop = %5.1f, h1 = %4d, h2 = %4d' % (best_h1["k"], log(best_h1["rop"], 2), best_h1["h1"], best_h1["h2"])
+            h1 += 1
+                                
+        if best is None or best_k["rop"] < best["rop"]:
+            best = best_k
             k += step_size
         else:
             # we go back
@@ -157,14 +122,14 @@ def drop_and_solve_hyb(f, n, alpha, q, bound, secret_distribution=True, **kwds):
         if step_size == 0:
             break
     
-    #print("Optimal k = " + str(k) + ", l1 = " + str(l1) +", l2 = " + str(l2) + ", h1 = " + str(h1_best) + ", h2 = " + str(h2_h1_best))
+    #print("Optimal k = " + str(k) + ", k1 = " + str(k1) +", k2 = " + str(k2) + ", h1 = " + str(h1_best) + ", h2 = " + str(h2_h1_best))
     return best
 
-def dual_scale_hyb(n, alpha, q, bound, l1, l2, h1, h2, secret_distribution,
+def dual_scale_hyb(n, alpha, q, bound, k1, k2, h1, h2, secret_distribution,
                 m=oo, reduction_cost_model=reduction_default_cost, c=None, use_lll=True):
     
-    T = binomial(l1, h1) * (2 ** h1)
-    Q = binomial(l2, h2) * (2 ** h2)
+    T = binomial(k1, h1) * (2 ** h1)
+    Q = binomial(k2, h2) * (2 ** h2)
     B = (1 + 1/sqrt(2 * pi)) * alpha * q * q / (sqrt(2) * (2 ** bound))
 
     # stddev of the error
@@ -223,42 +188,43 @@ def dual_scale_hyb(n, alpha, q, bound, l1, l2, h1, h2, secret_distribution,
 
     return best
 
-def MITM_estimator(n, alpha, q, start_bound, step_size, Max_bound):
+def MITM_estimator(n, alpha, q, sparse = 64, start_bound = 10, Max_bound = 13, step_size = 1):
     bound = float(start_bound)
-    duald = partial(drop_and_solve_hyb, dual_scale_hyb)
+    mitm_hyb = partial(hyb_estimate, dual_scale_hyb)
     best = None
-    print("Chosen Constants : ")
-    print("     n = " + str(n) + ", q = " + str(q))
-    print("")
-    cost_best = 0
+    bound_best = bound
+    print 'Chosen Parameters : '
+    print '     n = %5d, log(q) = %5.1f, alpha = %5.1f' % (n, log(q,2), alpha)
+    print
     Level = 0
+    step = float(step_size)
 
-    print("== Start Estimation ==")
-    print("")
-    
+    print 'Start Estimation . . .'
+    print 
+
     while Level <= 2:
-        print("Current bound = " + str(bound))
-        res = duald(n, alpha, q, bound, secret_distribution=((-1, 1), 64))
+
+        res = mitm_hyb(n, alpha, q, bound, secret_distribution=((-1, 1), sparse))
         
-        if best is None:
-            best = res
+        #print "Optimizing with beta = %4d . . ." % res["beta"]
 
-        rop_key = list(res)[0]
-        rop = res[rop_key]
-
-        if cost_best is 0 or rop < cost_best:
-            cost_best = rop
-            bound += step_size
+        if best is None or res["rop"] < best["rop"]:            
             best = res
-            while bound >= Max_bound and step_size >= 1/4:
-                step_size = float(step_size/2)
-                bound -= step_size
+            bound_best = bound
+            while bound + step > Max_bound and Level <= 2:
+                step = float(step/2)
+                Level += 1
+            bound += step
+
         else:
-            step_size = float(step_size/2)
+            step = float(step/2)
             Level += 1
             if Level <=2:
-                bound -= step_size
-
-    print("")
-    print("Optimal bound = " + str(bound))
-    pprint(best)
+                bound -= step
+    print
+    print '== Bit-security : %5.1f with optimal parameters' % log(best["rop"], 2)
+    print '     k = %5d, h1 = %2d, h2 = %2d, beta = %4d, mem = %5.1f' % (best["k"], best["h1"], best["h2"], best["beta"], log(best["mem"],2))
+    print '             (For simplicity, we set k1 = k2 = k/2)'
+    print
+    print "== Details"
+    print best
