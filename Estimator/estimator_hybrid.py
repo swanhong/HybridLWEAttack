@@ -1,6 +1,6 @@
 from estimator import *
 
-def hyb_estimate(f, n, alpha, q, bound, secret_distribution=True, **kwds):
+def drop_and_solve_hyb(f, n, alpha, q, bound, secret_distribution=True, **kwds):
     '''
     * Input 'bound' means,
     the lattice reduction will finds short vectors of (log) size < 'log(q) - bound'.
@@ -223,7 +223,7 @@ def dual_scale_hyb(n, alpha, q, bound, l1, l2, h1, h2, secret_distribution,
 
     return best
 
-def MITM_estimator(n, alpha, q, start_bound, Max_bound, step_size = 1):
+def MITM_estimator(n, alpha, q, start_bound, step_size, Max_bound):
     bound = float(start_bound)
     duald = partial(drop_and_solve_hyb, dual_scale_hyb)
     best = None
