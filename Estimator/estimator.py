@@ -15,6 +15,7 @@ The following distributions for the secret are supported:
 
 """
 
+
 # Imports
 
 from collections import OrderedDict
@@ -23,7 +24,7 @@ from sage.arith.srange import srange
 from sage.calculus.var import var
 from sage.functions.log import exp, log
 from sage.functions.other import ceil, sqrt, floor, binomial
-from sage.all import erf, next_prime
+from sage.all import erf
 from sage.interfaces.magma import magma
 from sage.misc.all import cached_function
 from sage.misc.all import prod
@@ -35,21 +36,20 @@ from sage.symbolic.all import pi, e
 from scipy.optimize import newton
 import logging
 import sage.crypto.lwe
-from pprint import pprint
 
 oo = PlusInfinity()
 
-
+
 class Logging:
     """
     Control level of detail being printed.
     """
 
     plain_logger = logging.StreamHandler()
-    plain_logger.setFormatter(logging.Formatter('%(message)s', ))
+    plain_logger.setFormatter(logging.Formatter('%(message)s',))
 
     detail_logger = logging.StreamHandler()
-    detail_logger.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s', ))
+    detail_logger.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s',))
 
     logging.getLogger("estimator").handlers = [plain_logger]
     logging.getLogger("estimator").setLevel(logging.INFO)
@@ -61,11 +61,11 @@ class Logging:
         logging.getLogger(logger).setLevel(logging.INFO)
 
     CRITICAL = logging.CRITICAL
-    ERROR = logging.ERROR
-    WARNING = logging.WARNING
-    INFO = logging.INFO
-    DEBUG = logging.DEBUG
-    NOTSET = logging.NOTSET
+    ERROR    = logging.ERROR
+    WARNING  = logging.WARNING
+    INFO     = logging.INFO
+    DEBUG    = logging.DEBUG
+    NOTSET   = logging.NOTSET
 
     @staticmethod
     def set_level(lvl, loggers=None):
@@ -81,7 +81,7 @@ class Logging:
         for logger in loggers:
             logging.getLogger(logger).setLevel(lvl)
 
-
+
 # Utility Classes #
 
 class OutOfBoundsError(ValueError):
@@ -97,7 +97,7 @@ class InsufficientSamplesError(ValueError):
     """
     pass
 
-
+
 # Binary Search #
 
 def binary_search_minimum(f, start, stop, param, extract=lambda x: x, *arg, **kwds):
@@ -111,11 +111,11 @@ def binary_search_minimum(f, start, stop, param, extract=lambda x: x, *arg, **kw
 
     """
     return binary_search(f, start, stop, param,
-                         predictate=lambda x, best: extract(x) <= extract(best),
+                         predictate=lambda x, best: extract(x)<=extract(best),
                          *arg, **kwds)
 
 
-def binary_search(f, start, stop, param, predicate=lambda x, best: x <= best, *arg, **kwds):
+def binary_search(f, start, stop, param, predicate=lambda x, best: x<=best, *arg, **kwds):
     """
     Searches for the best value in the interval [start,stop] depending on the given predicate.
 
@@ -128,7 +128,7 @@ def binary_search(f, start, stop, param, predicate=lambda x, best: x <= best, *a
     D = {}
     D[stop] = f(*arg, **kwds)
     best = D[stop]
-    b = ceil((start + stop) / 2)
+    b = ceil((start+stop)/2)
     direction = 0
     while True:
         if b not in D:
@@ -140,33 +140,33 @@ def binary_search(f, start, stop, param, predicate=lambda x, best: x <= best, *a
         if not predicate(D[b], best):
             if direction == 0:
                 start = b
-                b = ceil((stop + b) / 2)
+                b = ceil((stop+b)/2)
             else:
                 stop = b
-                b = floor((start + b) / 2)
+                b = floor((start+b)/2)
         else:
             best = D[b]
-            logging.getLogger("binsearch").debug(u"%4d, %s" % (b, best))
-            if b - 1 not in D:
-                kwds[param] = b - 1
-                D[b - 1] = f(*arg, **kwds)
-            if predicate(D[b - 1], best):
+            logging.getLogger("binsearch").debug(u"%4d, %s"%(b, best))
+            if b-1 not in D:
+                kwds[param] = b-1
+                D[b-1] = f(*arg, **kwds)
+            if predicate(D[b-1], best):
                 stop = b
-                b = floor((b + start) / 2)
+                b = floor((b+start)/2)
                 direction = 0
             else:
-                if b + 1 not in D:
-                    kwds[param] = b + 1
-                    D[b + 1] = f(*arg, **kwds)
-                if not predicate(D[b + 1], best):
+                if b+1 not in D:
+                    kwds[param] = b+1
+                    D[b+1] = f(*arg, **kwds)
+                if not predicate(D[b+1], best):
                     break
                 else:
                     start = b
-                    b = ceil((stop + b) / 2)
+                    b = ceil((stop+b)/2)
                     direction = 1
     return best
 
-
+
 class Param:
     """
     Namespace for processing LWE parameter sets.
@@ -244,7 +244,7 @@ class Param:
         if q < 1:
             raise ValueError("LWE modulus must be greater than 0.")
         if m is not None and m < 1:
-            raise InsufficientSamplesError(u"m=%d < 1" % m)
+            raise InsufficientSamplesError(u"m=%d < 1"%m)
 
         if prec is None:
             try:
@@ -259,7 +259,7 @@ class Param:
             if prec < 128:
                 prec = 128
         RR = RealField(prec)
-        n, alpha, q = ZZ(n), RR(alpha), ZZ(q),
+        n, alpha, q =  ZZ(n), RR(alpha), ZZ(q),
 
         if m is not oo:
             m = ZZ(m)
@@ -271,7 +271,7 @@ class Param:
         else:
             return n, alpha, q
 
-
+
 # Error Parameter Conversions
 
 def stddevf(sigma):
@@ -287,8 +287,8 @@ def stddevf(sigma):
         sage: stddevf(n)
         25.532...
     """
-    RR = parent(sigma)
-    return sigma / RR(sqrt(2 * pi))
+    # RR = parent(sigma)
+    return sigma/RR(sqrt(2*pi))
 
 
 def sigmaf(stddev):
@@ -305,7 +305,7 @@ def sigmaf(stddev):
         64.000...
     """
     RR = parent(stddev)
-    return RR(sqrt(2 * pi)) * stddev
+    return RR(sqrt(2*pi))*stddev
 
 
 def alphaf(sigma, q, sigma_is_stddev=False):
@@ -320,11 +320,11 @@ def alphaf(sigma, q, sigma_is_stddev=False):
 
     """
     if sigma_is_stddev is False:
-        return RR(sigma / q)
+        return RR(sigma/q)
     else:
-        return RR(sigmaf(sigma) / q)
+        return RR(sigmaf(sigma)/q)
 
-
+
 class Cost:
     """
     Algorithms costs.
@@ -357,11 +357,11 @@ class Cost:
 
             sage: from estimator import Cost
             sage: s = Cost({"delta_0":5, "bar":2})
-            sage: print s
+            sage: print(s)
             bar: 2, delta_0: 5
 
             sage: s = Cost([(u"delta_0", 5), ("bar",2)])
-            sage: print s
+            sage: print(s)
             delta_0: 5, bar: 2
 
         """
@@ -383,8 +383,8 @@ class Cost:
                 fmt = u"%%%ds" % keyword_width
                 kk = fmt % kk
             if not newline and k in format_strings:
-                s.append(format_strings[k] % (kk, v))
-            elif ZZ(1) / round_bound < v < round_bound or v == 0 or ZZ(-1) / round_bound > v > -round_bound:
+                s.append(format_strings[k]%(kk, v))
+            elif ZZ(1)/round_bound < v < round_bound or v == 0 or ZZ(-1)/round_bound > v > -round_bound:
                 try:
                     if compact:
                         s.append(u"%s: %d" % (kk, ZZ(v)))
@@ -402,7 +402,7 @@ class Cost:
                         else:
                             s.append(u"%s: %8.3f" % (kk, v))
             else:
-                t = u"%s" % (u"≈" if unicode else "") + u"%s2^%.1f" % ("-" if v < 0 else "", log(abs(v), 2).n())
+                t = u"%s"%(u"≈" if unicode else "") + u"%s2^%.1f" % ("-" if v < 0 else "", log(abs(v), 2).n())
                 if compact:
                     s.append(u"%s: %s" % (kk, t))
                 else:
@@ -503,7 +503,6 @@ class Cost:
         # TODO review this list
         do_repeat = {
             u"rop": True,
-            u"post": True,
             u"red": True,
             u"babai": True,
             u"babai_op": True,
@@ -541,7 +540,7 @@ class Cost:
                 else:
                     ret[key] = self.data[key]
             except KeyError:
-                raise NotImplementedError(u"You found a bug, this function does not know about '%s' but should." % key)
+                raise NotImplementedError(u"You found a bug, this function does not know about '%s' but should."%key)
         ret[u"repeat"] = times * ret.get("repeat", 1)
         return Cost(ret)
 
@@ -590,7 +589,7 @@ class Cost:
     def __unicode__(self):
         return self.str(unicode=True)
 
-
+
 class SDis:
     """
     Distributions of Secrets.
@@ -601,6 +600,21 @@ class SDis:
         """Return true if the secret distribution is sparse
 
         :param secret_distribution: distribution of secret, see module level documentation for details
+
+        EXAMPLES::
+
+            sage: from estimator import SDis
+            sage: SDis.is_sparse(True)
+            False
+
+            sage: SDis.is_sparse(((-1, 1), 64))
+            True
+
+            sage: SDis.is_sparse(((-3, 3), 64))
+            True
+
+            sage: SDis.is_sparse((-3, 3))
+            False
 
         """
         try:
@@ -615,6 +629,24 @@ class SDis:
         """Return true if the secret distribution is small
 
         :param secret_distribution: distribution of secret, see module level documentation for details
+
+        EXAMPLES::
+
+            sage: from estimator import SDis
+            sage: SDis.is_small(False)
+            False
+
+            sage: SDis.is_small(True)
+            True
+
+            sage: SDis.is_small(((-1, 1), 64))
+            True
+
+            sage: SDis.is_small(((-3, 3), 64))
+            True
+
+            sage: SDis.is_small((-3, 3))
+            True
 
         """
 
@@ -631,23 +663,80 @@ class SDis:
                 return False
 
     @staticmethod
-    def is_ternary(secret_distribution):
-        """Return true if the secret is ternary (sparse or not)
+    def bounds(secret_distribution):
+        """Return bounds of secret distribution
 
         :param secret_distribution: distribution of secret, see module level documentation for details
+
+        EXAMPLES::
+
+            sage: from estimator import SDis
+            sage: SDis.bounds(False)
+            Traceback (most recent call last):
+            ...
+            ValueError: Cannot extract bounds for secret.
+
+            sage: SDis.bounds(True)
+            Traceback (most recent call last):
+            ...
+            ValueError: Cannot extract bounds for secret.
+
+            sage: SDis.bounds(((-1, 1), 64))
+            (-1, 1)
+
+            sage: SDis.bounds(((-3, 3), 64))
+            (-3, 3)
+
+            sage: SDis.bounds((-3, 3))
+            (-3, 3)
+
+        """
+        try:
+            (a, b) = secret_distribution
+            try:
+                (a, b), _ = (a, b) # noqa
+            except (TypeError, ValueError):
+                pass
+            return a, b
+        except (TypeError, ValueError):
+            raise ValueError("Cannot extract bounds for secret.")
+
+    @staticmethod
+    def is_bounded_uniform(secret_distribution):
+        """Return true if the secret is bounded uniform (sparse or not).
+
+        :param secret_distribution: distribution of secret, see module level documentation for
+            details
+
+        EXAMPLES::
+
+            sage: from estimator import SDis
+            sage: SDis.is_bounded_uniform(False)
+            False
+
+            sage: SDis.is_bounded_uniform(True)
+            False
+
+            sage: SDis.is_bounded_uniform(((-1, 1), 64))
+            True
+
+            sage: SDis.is_bounded_uniform(((-3, 3), 64))
+            True
+
+            sage: SDis.is_bounded_uniform((-3, 3))
+            True
+
+        ..  note :: This function requires the bounds to be of opposite sign, as scaling code does
+            not handle the other case.
 
         """
 
         try:
-            a, b = secret_distribution
-            if a == -1 and b == 1:
-                return True
-        except (TypeError, ValueError):
-            pass
+            # next will fail if not bounded_uniform
+            a, b = SDis.bounds(secret_distribution)
 
-        try:
-            (a, b), h = secret_distribution
-            if a == -1 and b == 1:
+            # check bounds are around 0, otherwise not implemented
+            if a <= 0 and 0 <= b:
                 return True
         except (TypeError, ValueError):
             pass
@@ -655,21 +744,40 @@ class SDis:
         return False
 
     @staticmethod
-    def bounds(secret_distribution):
-        """Return bounds of secret distribution
+    def is_ternary(secret_distribution):
+        """Return true if the secret is ternary (sparse or not)
 
         :param secret_distribution: distribution of secret, see module level documentation for details
 
+        EXAMPLES::
+
+            sage: from estimator import SDis
+            sage: SDis.is_ternary(False)
+            False
+
+            sage: SDis.is_ternary(True)
+            False
+
+            sage: SDis.is_ternary(((-1, 1), 64))
+            True
+
+            sage: SDis.is_ternary((-1, 1))
+            True
+
+            sage: SDis.is_ternary(((-3, 3), 64))
+            False
+
+            sage: SDis.is_ternary((-3, 3))
+            False
+
         """
-        try:
-            (a, b) = secret_distribution
-            try:
-                (a, b), _ = (a, b)  # noqa
-            except (TypeError, ValueError):
-                pass
-            return a, b
-        except (TypeError, ValueError):
-            raise ValueError("Cannot extract bounds for secret.")
+
+        if SDis.is_bounded_uniform(secret_distribution):
+            a, b = SDis.bounds(secret_distribution)
+            if a == -1 and b == 1:
+                return True
+
+        return False
 
     @staticmethod
     def nonzero(secret_distribution, n):
@@ -682,42 +790,130 @@ class SDis:
         try:
             (a, b) = secret_distribution
             try:
-                (a, b), h = (a, b)  # noqa
+                (a, b), h = (a, b) # noqa
                 return h
             except (TypeError, ValueError):
+                if n is None:
+                    raise ValueError("Parameter n is required for sparse secrets.")
                 B = ZZ(b - a + 1)
-                h = ceil((B - 1) / B * n)
+                h = ceil((B-1)/B * n)
                 return h
         except (TypeError, ValueError):
             raise ValueError("Cannot extract `h`.")
 
     @staticmethod
-    def variance(secret_distribution, alpha, q):
+    def mean(secret_distribution, q=None, n=None):
         """
-        Variance of the secret per component.
+        Mean of the secret per component.
 
+        :param secret_distribution: distribution of secret, see module level documentation for details
+        :param n: only used for sparse secrets
+
+        EXAMPLE::
+
+            sage: from estimator import SDis
+            sage: SDis.mean(True)
+            0
+
+            sage: SDis.mean(False, q=10)
+            0
+
+            sage: SDis.mean(((-3,3)))
+            0
+
+            sage: SDis.mean(((-3,3),64), n=256)
+            0
+
+            sage: SDis.mean(((-3,2)))
+            -1/2
+
+            sage: SDis.mean(((-3,2),64), n=256)
+            -3/20
 
         """
         if not SDis.is_small(secret_distribution):
-            a = -floor(q / 2)
-            b = floor(q / 2)
-            n = b - a + 1
-            return (n ** 2 - 1) / ZZ(12)
+            # uniform distribution variance
+            if q is None:
+                raise ValueError("Parameter q is required for uniform secret.")
+            a = -floor(q/2)
+            b = floor(q/2)
+            return (a + b)/ZZ(2)
         else:
             try:
                 a, b = SDis.bounds(secret_distribution)
 
                 try:
                     (a, b), h = secret_distribution
-                    # sage: var("i,a,b")
-                    # sage: p = 1/(b-a)
-                    # sage: sum(i^2*p, i, a, b)
-                    return (2 * a ** 3 - 2 * b ** 3 - 3 * a ** 2 - 3 * b ** 2 + a - b) / (6 * ZZ(a - b))
+                    if n is None:
+                        raise ValueError("Parameter n is required for sparse secrets.")
+                    return h/ZZ(n) * (b*(b+1)-a*(a-1))/(2*(b-a))
                 except (TypeError, ValueError):
-                    n = b - a + 1
-                    return (n ** 2 - 1) / ZZ(12)
+                    return (a + b)/ZZ(2)
             except ValueError:
-                return stddevf(alpha * q) ** 2
+                # small with no bounds, it's normal
+                return ZZ(0)
+
+    @staticmethod
+    def variance(secret_distribution, alpha=None, q=None, n=None):
+        """
+        Variance of the secret per component.
+
+        :param secret_distribution: distribution of secret, see module level documentation for details
+        :param alpha: only used for normal form LWE
+        :param q: only used for normal form LWE
+        :param n: only used for sparse secrets
+
+        EXAMPLE::
+
+            sage: from estimator import SDis
+            sage: SDis.variance(True, 8./2^15, 2^15).sqrt().n()
+            3.19...
+
+            sage: SDis.variance((-3,3), 8./2^15, 2^15)
+            4
+
+            sage: SDis.variance(((-3,3),64), 8./2^15, 2^15, n=256)
+            7/6
+
+            sage: SDis.variance((-3,2))
+            35/12
+
+            sage: SDis.variance(((-3,2),64), n=256)
+            371/400
+
+            sage: SDis.variance((-1,1), 8./2^15, 2^15)
+            2/3
+
+            sage: SDis.variance(((-1,1),64), 8./2^15, 2^15, n=256)
+            1/4
+
+        ..  note :: This function assumes that the bounds are of opposite sign, and that the
+            distribution is centred around zero.
+        """
+        if not SDis.is_small(secret_distribution):
+            # uniform distribution variance
+            a = -floor(q/2)
+            b = floor(q/2)
+            n = b - a + 1
+            return (n**2 - 1)/ZZ(12)
+        else:
+            try:
+                a, b = SDis.bounds(secret_distribution)
+            except ValueError:
+                # small with no bounds, it's normal
+                return stddevf(alpha*q)**2
+            try:
+                (a, b), h = secret_distribution
+            except (TypeError, ValueError):
+                return ((b - a + 1)**2 - 1)/ZZ(12)
+            if n is None:
+                raise ValueError("Parameter n is required for sparse secrets.")
+            if not (a <= 0 and 0 <= b):
+                raise ValueError("a <= 0 and 0 <= b is required for uniform bounded secrets.")
+            # E(x^2), using https://en.wikipedia.org/wiki/Square_pyramidal_number
+            tt = (h/ZZ(n))*(2*b**3 + 3*b**2 + b - 2*a**3 + 3*a**2 - a)/(ZZ(6)*(b-a))
+            # Var(x) = E(x^2) - E(x)^2
+            return tt-SDis.mean(secret_distribution, n=n)**2
 
 
 def switch_modulus(f, n, alpha, q, secret_distribution, *args, **kwds):
@@ -732,17 +928,17 @@ def switch_modulus(f, n, alpha, q, secret_distribution, *args, **kwds):
 
     """
     length = SDis.nonzero(secret_distribution, n)
-    s_var = SDis.variance(secret_distribution, alpha, q)
+    s_var = SDis.variance(secret_distribution, alpha, q, n=n)
 
-    p = RR(ceil(sqrt(2 * pi * s_var * length / ZZ(12)) / alpha))
+    p = RR(ceil(sqrt(2*pi*s_var*length/ZZ(12)) / alpha))
 
     if p < 32:  # some random point
         # we can't pretend everything is uniform any more, p is too small
-        p = RR(ceil(sqrt(2 * pi * s_var * length * 2 / ZZ(12)) / alpha))
-    beta = RR(sqrt(2) * alpha)
+        p = RR(ceil(sqrt(2*pi*s_var*length*2/ZZ(12)) / alpha))
+    beta = RR(sqrt(2)*alpha)
     return f(n, beta, p, secret_distribution, *args, **kwds)
 
-
+
 # Repetition
 
 def amplify(target_success_probability, success_probability, majority=False):
@@ -763,10 +959,10 @@ def amplify(target_success_probability, success_probability, majority=False):
         return oo
 
     prec = max(53,
-               2 * ceil(abs(log(success_probability, 2))),
-               2 * ceil(abs(log(1 - success_probability, 2))),
-               2 * ceil(abs(log(target_success_probability, 2))),
-               2 * ceil(abs(log(1 - target_success_probability, 2))))
+               2*ceil(abs(log(success_probability, 2))),
+               2*ceil(abs(log(1-success_probability, 2))),
+               2*ceil(abs(log(target_success_probability, 2))),
+               2*ceil(abs(log(1-target_success_probability, 2))))
     prec = min(prec, 2048)
     RR = RealField(prec)
 
@@ -775,11 +971,11 @@ def amplify(target_success_probability, success_probability, majority=False):
 
     try:
         if majority:
-            eps = success_probability / 2
-            return ceil(2 * log(2 - 2 * target_success_probability) / log(1 - 4 * eps ** 2))
+            eps = success_probability/2
+            return ceil(2*log(2 - 2*target_success_probability)/log(1 - 4*eps**2))
         else:
             # target_success_probability = 1 - (1-success_probability)^trials
-            return ceil(log(1 - target_success_probability) / log(1 - success_probability))
+            return ceil(log(1-target_success_probability)/log(1 -success_probability))
     except ValueError:
         return oo
 
@@ -794,11 +990,11 @@ def amplify_sigma(target_advantage, sigma, q):
 
     """
     try:
-        sigma = sum(sigma_ ** 2 for sigma_ in sigma).sqrt()
+        sigma = sum(sigma_**2 for sigma_ in sigma).sqrt()
     except TypeError:
         pass
     RR = parent(sigma)
-    advantage = RR(exp(-RR(pi) * (RR(sigma / q) ** 2)))
+    advantage = RR(exp(-RR(pi)*(RR(sigma/q)**2)))
     # return target_advantage/advantage**2  # old
     return amplify(target_advantage, advantage, majority=True)
 
@@ -828,7 +1024,7 @@ def rinse_and_repeat(f, n, alpha, q, success_probability=0.99, m=oo,
     i = floor(-log(success_probability, 2))
     has_solution = False
     while True:
-        prob = RR(min(2 ** -i, success_probability))
+        prob = RR(min(2**-i, success_probability))
         try:
             current = f(n, alpha, q, success_probability=prob, m=m, *args, **kwds)
             repeat = amplify(success_probability, prob, majority=decision)
@@ -839,14 +1035,19 @@ def rinse_and_repeat(f, n, alpha, q, success_probability=0.99, m=oo,
             key = list(best)[0] if best is not None else optimisation_target
             current = Cost()
             current[key] = PlusInfinity()
-        current["epsilon"] = ZZ(2) ** -i
+        current["epsilon"] = ZZ(2)**-i
 
         logging.getLogger("repeat").debug(current)
 
         key = list(current)[0]
         if best is None:
-            best = current
+            if current[key] is not PlusInfinity():
+                best = current
             i += step_size
+
+            if i > 8192:  # somewhat arbitrary constant
+                raise RuntimeError("Looks like we are stuck in an infinite loop.")
+
             continue
 
         if key not in best or current[key] < best[key]:
@@ -855,11 +1056,11 @@ def rinse_and_repeat(f, n, alpha, q, success_probability=0.99, m=oo,
         else:
             # we go back
             i = -log(best["epsilon"], 2) - step_size
-            i += step_size / 2
+            i += step_size/2
             if i <= 0:
-                i = step_size / 2
+                i = step_size/2
             # and half the step size
-            step_size = step_size / 2
+            step_size = step_size/2
 
         if step_size == 0:
             break
@@ -869,7 +1070,7 @@ def rinse_and_repeat(f, n, alpha, q, success_probability=0.99, m=oo,
 
     return best
 
-
+
 class BKZ:
     """
     Cost estimates for BKZ.
@@ -919,8 +1120,8 @@ class BKZ:
         ```
 
         """
-        small = ((2, 1.02190),  # noqa
-                 (5, 1.01862),  # noqa
+        small = (( 2, 1.02190),  # noqa
+                 ( 5, 1.01862),  # noqa
                  (10, 1.01616),
                  (15, 1.01485),
                  (20, 1.01420),
@@ -933,11 +1134,11 @@ class BKZ:
         elif k < 40:
             for i in range(1, len(small)):
                 if small[i][0] > k:
-                    return RR(small[i - 1][1])
+                    return RR(small[i-1][1])
         elif k == 40:
             return RR(small[-1][1])
         else:
-            return RR(k / (2 * pi * e) * (pi * k) ** (1 / k)) ** (1 / (2 * (k - 1)))
+            return RR(k/(2*pi*e) * (pi*k)**(1/k))**(1/(2*(k-1)))
 
     @staticmethod
     def _beta_secant(delta):
@@ -989,7 +1190,7 @@ class BKZ:
             return k
 
         try:
-            k = find_root(lambda k: RR(BKZ._delta_0f(k) - delta), 40, 2 ** 16, maxiter=500)
+            k = find_root(lambda k: RR(BKZ._delta_0f(k) - delta), 40, 2**16, maxiter=500)
             k = ceil(k)
         except RuntimeError:
             # finding root failed; reasons:
@@ -1020,9 +1221,9 @@ class BKZ:
         """
         k = ZZ(40)
 
-        while delta_0f(2 * k) > delta:
+        while delta_0f(2*k) > delta:
             k *= 2
-        while delta_0f(k + 10) > delta:
+        while delta_0f(k+10) > delta:
             k += 10
         while True:
             if delta_0f(k) < delta:
@@ -1041,7 +1242,7 @@ class BKZ:
         .. note :: loosely based on experiments in [PhD:Chen13]
 
         """
-        return 8 * d
+        return 8*d
 
     @staticmethod
     @cached_function
@@ -1060,14 +1261,14 @@ class BKZ:
         """
         log_delta = RDF(log(delta))
         log_q = RDF(log(q))
-        qnm = log_q * (n / m)
-        qnm_p_log_delta_m = qnm + log_delta * m
-        tmm1 = RDF(2 * m / (m - 1))
-        b = [(qnm_p_log_delta_m - log_delta * (tmm1 * i)) for i in range(m)]
-        b = [log_q - b[-1 - i] for i in range(m)]
+        qnm = log_q*(n/m)
+        qnm_p_log_delta_m = qnm + log_delta*m
+        tmm1 = RDF(2*m/(m-1))
+        b = [(qnm_p_log_delta_m - log_delta*(tmm1 * i)) for i in range(m)]
+        b = [log_q - b[-1-i] for i in range(m)]
         b = map(lambda x: x.exp(), b)
         return b
-
+
     # BKZ Estimates
 
     @staticmethod
@@ -1083,9 +1284,9 @@ class BKZ:
             Heidelberg.
         """
         if B:
-            return d ** 3 * B ** 2
+            return d**3 * B**2
         else:
-            return d ** 3  # ignoring B for backward compatibility
+            return d**3  # ignoring B for backward compatibility
 
     @staticmethod
     def LinPei11(beta, d, B=None):
@@ -1101,7 +1302,7 @@ class BKZ:
 
         """
         delta_0 = delta_0f(beta)
-        return BKZ.LLL(d, B) + ZZ(2) ** RR(1.8 / log(delta_0, 2) - 110 + log(2.3 * 10 ** 9, 2))
+        return BKZ.LLL(d, B) + ZZ(2)**RR(1.8/log(delta_0, 2) - 110 + log(2.3*10**9, 2))
 
     @staticmethod
     def _BDGL16_small(beta, d, B=None):
@@ -1116,7 +1317,7 @@ class BKZ:
         nearest neighbor searching with applications to lattice sieving.  In SODA 2016, (pp.
         10–24).
          """
-        return BKZ.LLL(d, B) + ZZ(2) ** RR(0.387 * beta + 16.4 + log(BKZ.svp_repeat(beta, d), 2))
+        return BKZ.LLL(d, B) + ZZ(2)**RR(0.387*beta + 16.4 + log(BKZ.svp_repeat(beta, d), 2))
 
     @staticmethod
     def _BDGL16_asymptotic(beta, d, B=None):
@@ -1132,7 +1333,7 @@ class BKZ:
         10–24).
         """
         # TODO we simply pick the same additive constant 16.4 as for the experimental result in [BDGL16]
-        return BKZ.LLL(d, B) + ZZ(2) ** RR(0.292 * beta + 16.4 + log(BKZ.svp_repeat(beta, d), 2))
+        return BKZ.LLL(d, B) + ZZ(2)**RR(0.292*beta + 16.4 + log(BKZ.svp_repeat(beta, d), 2))
 
     @staticmethod
     def BDGL16(beta, d, B=None):
@@ -1170,7 +1371,7 @@ class BKZ:
              fingerprinting to lattice sieving (Doctoral dissertation).  Eindhoven University of
              Technology. http://repository.tue.nl/837539
          """
-        return BKZ.LLL(d, B) + ZZ(2) ** RR((0.265 * beta + 16.4 + log(BKZ.svp_repeat(beta, d), 2)))
+        return BKZ.LLL(d, B) + ZZ(2)**RR((0.265*beta + 16.4 + log(BKZ.svp_repeat(beta, d), 2)))
 
     @staticmethod
     def CheNgu12(beta, d, B=None):
@@ -1200,8 +1401,8 @@ class BKZ:
         """
         # TODO replace these by fplll timings
         repeat = BKZ.svp_repeat(beta, d)
-        cost = RR(0.270188776350190 * beta * log(beta) - 1.0192050451318417 * beta + 16.10253135200765)
-        return BKZ.LLL(d, B) + repeat * ZZ(2) ** cost
+        cost = RR(0.270188776350190*beta*log(beta) - 1.0192050451318417*beta + 16.10253135200765)
+        return BKZ.LLL(d, B) +  repeat * ZZ(2)**cost
 
     @staticmethod
     def ADPS16(beta, d, B=None, mode="classical"):
@@ -1233,20 +1434,20 @@ class BKZ:
          """
 
         if mode not in ("classical", "quantum", "paranoid"):
-            raise ValueError("Mode '%s' not understood" % mode)
+            raise ValueError("Mode '%s' not understood"%mode)
 
         c = {"classical": 0.2920,
-             "quantum": 0.2650,  # paper writes 0.262 but this isn't right, see above
-             "paranoid": 0.2075}
+             "quantum":   0.2650,  # paper writes 0.262 but this isn't right, see above
+             "paranoid":  0.2075}
 
         c = c[mode]
 
-        return ZZ(2) ** RR(c * beta)
+        return ZZ(2)**RR(c*beta)
 
     sieve = BDGL16
     qsieve = LaaMosPol14
-    lp = LinPei11
-    enum = CheNgu12
+    lp =     LinPei11
+    enum =   CheNgu12
 
 
 def delta_0f(beta):
@@ -1267,7 +1468,7 @@ def betaf(delta):
 
 
 reduction_default_cost = BKZ.sieve
-#reduction_default_cost = BKZ.enum
+
 
 def lattice_reduction_cost(cost_model, delta_0, d, B=None):
     """
@@ -1294,7 +1495,8 @@ def lattice_reduction_opt_m(n, q, delta):
     :param delta: root Hermite factor `δ_0`
 
     """
-    return ZZ(round(sqrt(n * log(q, 2) / log(delta, 2))))
+    # round can go wrong if the input is not a floating point number
+    return ZZ(round(sqrt(n*log(q, 2)/log(delta, 2)).n()))
 
 
 def sieve_or_enum(func):
@@ -1303,7 +1505,6 @@ def sieve_or_enum(func):
 
     :param func: a lattice-reduction based estimator
     """
-
     def wrapper(*args, **kwds):
         from copy import copy
         kwds = copy(kwds)
@@ -1314,10 +1515,9 @@ def sieve_or_enum(func):
             return a
         else:
             return b
-
     return wrapper
 
-
+
 # Combinatorial Algorithms for Sparse/Sparse Secrets
 
 def guess_and_solve(f, n, alpha, q, secret_distribution, success_probability=0.99, **kwds):
@@ -1338,7 +1538,7 @@ def guess_and_solve(f, n, alpha, q, secret_distribution, success_probability=0.9
         sage: dualg = partial(guess_and_solve, dual_scale)
         sage: dualg(n, alpha, q, secret_distribution=((-1,1), 64))
             rop:   2^59.7
-              m:     1051
+              m:      539
             red:   2^59.7
         delta_0: 1.008653
            beta:      115
@@ -1363,22 +1563,22 @@ def guess_and_solve(f, n, alpha, q, secret_distribution, success_probability=0.9
         step_size /= 2
     i = 0
     while True:
-        if i < 0:
+        if i<0:
             break
         try:
-            current = f(n - i, alpha, q, secret_distribution=secret_distribution,
-                        success_probability=max(1 - 1 / RR(2) ** 80, success_probability), **kwds)
+            current = f(n-i, alpha, q, secret_distribution=secret_distribution,
+                        success_probability=max(1-1/RR(2)**80, success_probability), **kwds)
         except (OutOfBoundsError, RuntimeError, InsufficientSamplesError):
             i += abs(step_size)
             fail_attempts += 1
             if fail_attempts > max_fail_attempts:
                 break
             continue
-        if h is None or i < h:
-            repeat = size ** i
+        if h is None or i<h:
+            repeat = size**i
         else:
             # TODO: this is too pessimistic
-            repeat = (size) ** h * binomial(i, h)
+            repeat = (size)**h * binomial(i, h)
         current["k"] = i
         current = current.repeat(repeat, select={"m": False})
 
@@ -1393,7 +1593,7 @@ def guess_and_solve(f, n, alpha, q, secret_distribution, success_probability=0.9
                 best = current
                 i += step_size
             else:
-                step_size = -1 * step_size // 2
+                step_size = -1*step_size//2
                 i += step_size
 
         if step_size == 0:
@@ -1403,9 +1603,9 @@ def guess_and_solve(f, n, alpha, q, secret_distribution, success_probability=0.9
     return best
 
 
-def success_probability_drop(n, h, k, fail=0):
+def success_probability_drop(n, h, k, fail=0, rotations=False):
     """
-    Probability that `k` randomly sampled components have at most ``fail`` non-zero components amongst
+    Probability that `k` randomly sampled components have ``fail`` non-zero components amongst
     them.
 
     :param n: LWE dimension `n > 0`
@@ -1413,36 +1613,22 @@ def success_probability_drop(n, h, k, fail=0):
     :param k: number of components to ignore
     :param fail: we tolerate ``fail`` number of non-zero components amongst the `k` ignored
         components
+    :param rotations: consider rotations of the basis to exploit ring structure (NTRU only)
     """
 
-    N = n  # population size
-    K = n - h  # number of success states in the population
-    n = k  # number of draws
+    N = n         # population size
+    K = n-h       # number of success states in the population
+    n = k         # number of draws
     k = n - fail  # number of observed successes
-    return (binomial(K, k) * binomial(N - K, n - k)) / binomial(N, n)
+    prob_drop = binomial(K, k)*binomial(N-K, n-k)/binomial(N, n)
+    if rotations:
+        return 1-(1-prob_drop)**N
+    else:
+        return prob_drop
 
-def succ_prob_fcn(n, h, k, i, j, C):
-
-    prob = (binomial(n - k, h - i - j) * binomial(k / 2, i) * binomial(k / 2, j)) / C
-    
-
-    #prob = binomial(n - h, k - i - j) * binomial(h, i + j) / binomial(n, k)
-    #if k != 0:
-    #    prob *= binomial(k / 2, i) * binomial(k / 2, j) / binomial(k, i + j)
-    return prob
-
-def succ_prob_fcn2(n, h, l1, l2, i, j, C):
-
-    prob = (binomial(n - l1 - l2, h - i - j) * binomial(l1, i) * binomial(l2, j)) / C
-    
-
-    #prob = binomial(n - h, k - i - j) * binomial(h, i + j) / binomial(n, k)
-    #if k != 0:
-    #    prob *= binomial(k / 2, i) * binomial(k / 2, j) / binomial(k, i + j)
-    return prob  
 
 def drop_and_solve(f, n, alpha, q, secret_distribution=True, success_probability=0.99,
-                   postprocess=True, decision=True, **kwds):
+                   postprocess=True, decision=True, rotations=False, **kwds):
     """
     Solve instances of dimension ``n-k`` with increasing ``k`` using ``f`` and pick parameters such
     that cost is minimised.
@@ -1458,14 +1644,15 @@ def drop_and_solve(f, n, alpha, q, secret_distribution=True, success_probability
 
     EXAMPLE:
 
-        sage: from estimator import drop_and_solve, dual_scale, partial
+        sage: from estimator import drop_and_solve, dual_scale, primal_usvp, partial
         sage: q = next_prime(2^30)
         sage: n, alpha = 512, 8/q
+        sage: primald = partial(drop_and_solve, primal_usvp)
         sage: duald = partial(drop_and_solve, dual_scale)
 
         sage: duald(n, alpha, q, secret_distribution=((-1,1), 64))
                 rop:   2^52.1
-                  m:      957
+                  m:      500
                 red:   2^52.0
             delta_0: 1.009353
                beta:       98
@@ -1475,10 +1662,22 @@ def drop_and_solve(f, n, alpha, q, secret_distribution=True, success_probability
                   k:       55
         postprocess:        8
 
+        sage: duald(n, alpha, q, secret_distribution=((-3,3), 64))
+                rop:   2^55.6
+                  m:      525
+                red:   2^55.4
+            delta_0: 1.009233
+               beta:      101
+             repeat:   2^14.3
+                  d:      973
+                  c:    3.909
+                  k:       64
+        postprocess:        6
+
         sage: kwds = {"use_lll":False, "postprocess":False}
         sage: duald(n, alpha, q, secret_distribution=((-1,1), 64), **kwds)
                 rop:   2^63.2
-                  m:     1033
+                  m:      521
                 red:   2^63.2
             delta_0: 1.008953
                beta:      107
@@ -1486,6 +1685,45 @@ def drop_and_solve(f, n, alpha, q, secret_distribution=True, success_probability
                   d:     1033
                   c:    9.027
                   k:        0
+        postprocess:        0
+
+        sage: duald(n, alpha, q, secret_distribution=((-3,3), 64), **kwds)
+                rop:   2^67.9
+                  m:      560
+                red:   2^67.9
+            delta_0: 1.008668
+               beta:      114
+             repeat:  524.610
+                  d:     1068
+                  c:    4.162
+                  k:        4
+        postprocess:        0
+
+        sage: duald(n, alpha, q, secret_distribution=((-3,3), 64), rotations=True, **kwds)
+        Traceback (most recent call last):
+          ...
+        ValueError: Rotations are only support as part of the primal-usvp attack on NTRU.
+
+        sage: primald(n, alpha, q, secret_distribution=((-3,3), 64), rotations=True, **kwds)
+                rop:   2^44.5
+                red:   2^44.5
+            delta_0: 1.010046
+               beta:       84
+                  d:      914
+                  m:      445
+             repeat: 1.509286
+                  k:       44
+        postprocess:        0
+
+        sage: primald(n, alpha, q, secret_distribution=((-3,3), 64), rotations=False, **kwds)
+                rop:   2^51.4
+                red:   2^51.4
+            delta_0: 1.009350
+               beta:       98
+                  d:     1003
+                  m:      494
+             repeat: 1.708828
+                  k:        4
         postprocess:        0
 
     This function is based on:
@@ -1496,9 +1734,11 @@ def drop_and_solve(f, n, alpha, q, secret_distribution=True, success_probability
 
 
     """
-    n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability)
 
-    RR = parent(alpha)
+    if rotations and f.func_name != "primal_usvp":
+        raise ValueError("Rotations are only support as part of the primal-usvp attack on NTRU.")
+
+    n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability)
 
     best = None
 
@@ -1507,46 +1747,47 @@ def drop_and_solve(f, n, alpha, q, secret_distribution=True, success_probability
 
     # too small a step size leads to an early abort, too large a step
     # size means stepping over target
-    step_size = int(n / 16)
+    step_size = int(n/32)
 
-    if not SDis.is_ternary(secret_distribution):
-        raise NotImplementedError("Only ternary secrets are currently supported.")
+    if not SDis.is_bounded_uniform(secret_distribution):
+        raise NotImplementedError("Only bounded uniform secrets are currently supported.")
 
     a, b = SDis.bounds(secret_distribution)
+    assert(a == -b)
     h = SDis.nonzero(secret_distribution, n)
 
-    k = 0
+    k = ZZ(0)
 
-    while True:
-        probability = RR(success_probability_drop(n, h, k))
+    while (n-h) > k:
+        probability = success_probability_drop(n, h, k, rotations=rotations)
 
         # increase precision until the probability is meaningful
-        while success_probability ** probability == 1:
-            success_probability = RealField(64 + success_probability.prec())(success_probability)
+        while success_probability**probability == 1:
+            success_probability = RealField(64+success_probability.prec())(success_probability)
 
-        current = f(n - k, alpha, q,
-                    success_probability=success_probability ** probability if decision else success_probability,
+        current = f(n-k, alpha, q,
+                    success_probability=success_probability**probability if decision else success_probability,
                     secret_distribution=secret_distribution, **kwds)
 
-        cost_lat = current.values()[0]
+        cost_lat  = current.values()[0]
         cost_post = 0
         if postprocess:
             repeat = current["repeat"]
-            dim = current["d"]
+            dim    = current["d"]
             for i in range(1, k):
                 # compute inner products with rest of A
                 cost_post_i = 2 * repeat * dim * k
                 # there are (k)(i) positions and max(s_i)-min(s_i) options per position
                 # for each position we need to add/subtract the right elements
-                cost_post_i += repeat * binomial(k, i) * (b - a) ** i * i
+                cost_post_i += repeat * binomial(k, i) * (b-a)**i  * i
                 if cost_post + cost_post_i >= cost_lat:
-                    postprocess = i - 1
+                    postprocess = i
                     break
                 cost_post += cost_post_i
-                probability += success_probability_drop(n, h, k, i)
+                probability += success_probability_drop(n, h, k, i, rotations=rotations)
 
         current["rop"] = cost_lat + cost_post
-        current = current.repeat(1 / probability, select={"m": False})
+        current = current.repeat(1/probability, select={"m": False})
         current["k"] = k
         current["postprocess"] = postprocess
         current = current.reorder(["rop"])
@@ -1565,21 +1806,75 @@ def drop_and_solve(f, n, alpha, q, secret_distribution=True, success_probability
         else:
             # we go back
             k = best["k"] - step_size
-            k += step_size / 2
+            k += step_size/2
             if k <= 0:
-                k = step_size / 2
+                k = step_size/2
             # and half the step size
-            step_size = step_size / 2
+            step_size = step_size/2
 
         if step_size == 0:
             break
 
     return best
 
-
+
 # Primal Attack (uSVP)
 
-def _primal_usvp(block_size, n, alpha, q, secret_distribution=True, m=oo,
+def _primal_scale_factor(secret_distribution, alpha=None, q=None, n=None):
+    """
+    Scale factor for primal attack.
+
+    :param secret_distribution: distribution of secret, see module level documentation for details
+    :param alpha: noise rate `0 ≤ α < 1`, noise has standard deviation `αq/\sqrt{2π}`
+    :param q: modulus `0 < q`
+    :param n: only used for sparse secrets
+
+    EXAMPLE::
+
+        sage: from estimator import _primal_scale_factor
+        sage: _primal_scale_factor(True, 8./2^15, 2^15)
+        1.000000000...
+
+        sage: _primal_scale_factor((-1,1), alpha=8./2^15, q=2^15)
+        3.908820095...
+
+        sage: _primal_scale_factor(((-1,1), 64), alpha=8./2^15, q=2^15, n=256)
+        6.383076486...
+
+        sage: _primal_scale_factor((-3,3), alpha=8./2^15, q=2^15)
+        1.595769121...
+
+        sage: _primal_scale_factor(((-3,3), 64), alpha=8./2^15, q=2^15, n=256)
+        2.954790254...
+
+        sage: _primal_scale_factor((-3,2), alpha=8./2^15, q=2^15)
+        1.793489661...
+
+        sage: _primal_scale_factor(((-3,2), 64), alpha=8./2^15, q=2^15, n=256)
+        3.274449147...
+
+    ..  note :: This function assumes that the bounds are of opposite sign, and that the
+        distribution is centred around zero.
+    """
+
+    # For small/sparse secret use Bai and Galbraith's scaled embedding
+    # NOTE: We assume a <= 0 <= b
+    # TODO: if a != -b then some improved scaling could be done by balancing the secret
+
+    if SDis.is_bounded_uniform(secret_distribution):
+        a, b = SDis.bounds(secret_distribution)
+        # target same stddev per component
+        stddev = stddevf(alpha*q)
+        var_s = SDis.variance(secret_distribution, alpha, q, n=n)
+        avg_s = SDis.mean(secret_distribution, q=q, n=n)
+        scale = stddev/RR(sqrt(var_s + avg_s**2))
+    else:
+        scale = RR(1)
+
+    return scale
+
+
+def _primal_usvp(block_size, n, alpha, q, scale=1, m=oo,
                  success_probability=0.99,
                  reduction_cost_model=reduction_default_cost):
     """
@@ -1588,12 +1883,12 @@ def _primal_usvp(block_size, n, alpha, q, secret_distribution=True, m=oo,
     :param n: LWE dimension `n > 0`
     :param alpha: noise rate `0 ≤ α < 1`, noise will have standard deviation `αq/\sqrt{2π}`
     :param q: modulus `0 < q`
-    :param secret_distribution: distribution of secret, see module level documentation for details
+    :param scale: The identity part of the lattice basis is scaled by this constant.
     :param m: number of LWE samples `m > 0`
     :param success_probability: targeted success probability < 1
     :param reduction_cost_model: cost model for lattice reduction
 
-    .. note:: This is the low-level function, in most cases you will want to call ``primal_usp``
+    .. note:: This is the low-level function, in most cases you will want to call ``primal_usvp``
 
     """
 
@@ -1601,35 +1896,26 @@ def _primal_usvp(block_size, n, alpha, q, secret_distribution=True, m=oo,
     RR = alpha.parent()
     q = RR(q)
     delta_0 = delta_0f(block_size)
-    stddev = stddevf(alpha * q)
+    stddev = stddevf(alpha*q)
     block_size = RR(block_size)
 
-    if SDis.is_ternary(secret_distribution):
-        if SDis.is_sparse(secret_distribution):
-            h = SDis.nonzero(secret_distribution, n)
-            scale = RR(stddev * sqrt(n / h))
-        else:
-            scale = RR(sqrt(1.5) * stddev)
-    else:
-        scale = RR(1)
+    scale = RR(scale)
 
-    if SDis.is_small(secret_distribution):
-        m += n
-
-    m = min(2 * ceil(sqrt(n * log(q) / log(delta_0))), m)
+    m = min(2*ceil(sqrt(n*log(q)/log(delta_0))), m)
 
     def log_b_star(d):
-        return delta_0.log() * (2 * block_size - d) + (n * scale.log() + (d - n - 1) * q.log()) / d
+        return delta_0.log()*(2*block_size-d) + (n*scale.log() + (d-n-1)*q.log())/d
 
-    C = stddev.log() + block_size.log() / 2
+    C = stddev.log() + block_size.log()/2
 
-    for d in range(n, m):
+    # we have m samples → the largest permissible dimension d is m+1
+    for d in range(n, m+2):
         if log_b_star(d) - C >= 0:
             break
 
     def ineq(d):
         lhs = stddev * RR(sqrt(block_size))
-        rhs = delta_0 ** (2 * block_size - d) * (scale ** n * q ** (d - n - 1)) ** (ZZ(1) / d)
+        rhs = delta_0**(2*block_size-d) * (scale**n * q**(d-n-1))**(ZZ(1)/d)
         return lhs <= rhs
 
     ret = lattice_reduction_cost(reduction_cost_model, delta_0, d)
@@ -1638,10 +1924,6 @@ def _primal_usvp(block_size, n, alpha, q, secret_distribution=True, m=oo,
         ret["red"] = oo
 
     ret["d"] = d
-    ret["m"] = m
-    if secret_distribution:
-        ret["m"] -= n
-
     ret["delta_0"] = delta_0
 
     return ret
@@ -1672,22 +1954,22 @@ def primal_usvp(n, alpha, q, secret_distribution=True,
             delta_0: 1.005374
                beta:      257
                   d:      704
-                  m:     1200
+                  m:      447
 
         sage: primal_usvp(n, alpha, q, secret_distribution=True, m=n)
-                rop:  2^151.9
-                red:  2^151.9
-            delta_0: 1.005374
-               beta:      257
-                  d:      704
-                  m:      512
+                rop:  2^201.5
+                red:  2^201.5
+            delta_0: 1.004628
+               beta:      321
+                  d:      513
+                  m:      256
 
         sage: primal_usvp(n, alpha, q, secret_distribution=False, m=2*n)
-                rop:  2^203.1
-                red:  2^203.1
-            delta_0: 1.004609
-               beta:      323
-                  d:      511
+                rop:  2^201.5
+                red:  2^201.5
+            delta_0: 1.004628
+               beta:      321
+                  d:      513
                   m:      512
 
         sage: primal_usvp(n, alpha, q, reduction_cost_model=BKZ.sieve)
@@ -1696,7 +1978,7 @@ def primal_usvp(n, alpha, q, secret_distribution=True,
             delta_0: 1.005374
                beta:      257
                   d:      704
-                  m:     1200
+                  m:      447
 
         sage: primal_usvp(n, alpha, q)
                 rop:  2^151.9
@@ -1704,7 +1986,7 @@ def primal_usvp(n, alpha, q, secret_distribution=True,
             delta_0: 1.005374
                beta:      257
                   d:      704
-                  m:     1200
+                  m:      447
 
         sage: primal_usvp(n, alpha, q, secret_distribution=(-1,1), m=n)
                 rop:   2^81.9
@@ -1712,7 +1994,7 @@ def primal_usvp(n, alpha, q, secret_distribution=True,
             delta_0: 1.007317
                beta:      156
                   d:      492
-                  m:      512
+                  m:      235
 
         sage: primal_usvp(n, alpha, q, secret_distribution=((-1,1), 64))
                 rop:   2^73.4
@@ -1720,7 +2002,7 @@ def primal_usvp(n, alpha, q, secret_distribution=True,
             delta_0: 1.007723
                beta:      142
                   d:      461
-                  m:      960
+                  m:      204
 
     ..  [USENIX:ADPS16] Alkim, E., Léo Ducas, Thomas Pöppelmann, & Schwabe, P.  (2015).
         Post-quantum key exchange - a new hope.
@@ -1735,29 +2017,36 @@ def primal_usvp(n, alpha, q, secret_distribution=True,
 
     n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability)
 
+    # allow for a larger embedding lattice dimension, using Bai and Galbraith's
     if SDis.is_small(secret_distribution):
-        m = m + n
+        m += n
+
+    scale = _primal_scale_factor(secret_distribution, alpha, q, n)
 
     kwds = {"n": n, "alpha": alpha, "q": q,
-            "secret_distribution": secret_distribution,
             "reduction_cost_model": reduction_cost_model,
-            "m": m}
+            "m": m, "scale": scale}
 
-    cost = binary_search(_primal_usvp, start=40, stop=2 * n, param="block_size",
-                         predicate=lambda x, best: x["red"] <= best["red"], **kwds)
+    cost = binary_search(_primal_usvp, start=40, stop=2*n, param="block_size",
+                         predicate=lambda x, best: x["red"]<=best["red"], **kwds)
 
-    for block_size in range(32, cost["beta"] + 1)[::-1]:
+    for block_size in range(32, cost["beta"]+1)[::-1]:
         t = _primal_usvp(block_size=block_size, **kwds)
         if t["red"] == oo:
             break
         cost = t
 
+    if SDis.is_small(secret_distribution):
+        cost["m"] = cost["d"]-n-1
+    else:
+        cost["m"] = cost["d"]-1
+
     return cost
 
-
+
 # Primal Attack (Enumeration)
 
-def enumeration_cost(n, alpha, q, success_probability, delta_0, m, clocks_per_enum=2 ** 15.1):
+def enumeration_cost(n, alpha, q, success_probability, delta_0, m, clocks_per_enum=2**15.1):
     """
     Estimates the cost of performing enumeration.
 
@@ -1776,19 +2065,19 @@ def enumeration_cost(n, alpha, q, success_probability, delta_0, m, clocks_per_en
 
     B = BKZ.GSA(n, q, delta_0, m)
 
-    d = [RDF(1)] * m
+    d = [RDF(1)]*m
     bd = [d[i] * B[i] for i in range(m)]
-    scaling_factor = RDF(sqrt(pi) / (2 * alpha * q))
-    probs_bd = [RDF((bd[i] * scaling_factor)).erf() for i in range(m)]
+    scaling_factor = RDF(sqrt(pi) / (2*alpha*q))
+    probs_bd = [RDF((bd[i]  * scaling_factor)).erf() for i in range(m)]
     success_probability = prod(probs_bd)
 
-    if RR(success_probability).is_NaN():
+    if RR(success_probability).is_NaN() or success_probability == 0.0:
         # try in higher precision
         step = RR(step)
-        d = [RR(1)] * m
+        d = [RR(1)]*m
         bd = [d[i] * B[i] for i in range(m)]
-        scaling_factor = RR(sqrt(pi) / (2 * alpha * q))
-        probs_bd = [RR((bd[i] * scaling_factor)).erf() for i in range(m)]
+        scaling_factor = RR(sqrt(pi) / (2*alpha*q))
+        probs_bd = [RR((bd[i]  * scaling_factor)).erf() for i in range(m)]
         success_probability = prod(probs_bd)
 
         if success_probability.is_NaN():
@@ -1809,7 +2098,7 @@ def enumeration_cost(n, alpha, q, success_probability, delta_0, m, clocks_per_en
     while success_probability < RDF(target_success_probability):
         v, i = bd.pop(0)
         d[i] += step
-        v += B[i] * step
+        v += B[i]*step
         last_success_probability = success_probability
         success_probability /= probs_bd[i]
         probs_bd[i] = (v * scaling_factor).erf()
@@ -1825,7 +2114,7 @@ def enumeration_cost(n, alpha, q, success_probability, delta_0, m, clocks_per_en
 
 
 def _primal_decode(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.99,
-                   reduction_cost_model=reduction_default_cost, clocks_per_enum=2 ** 15.1):
+                   reduction_cost_model=reduction_default_cost, clocks_per_enum=2**15.1):
     """
     Decoding attack as described in [LinPei11]_.
 
@@ -1884,7 +2173,7 @@ def _primal_decode(n, alpha, q, secret_distribution=True, m=oo, success_probabil
     n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability)
 
     if m < 1:
-        raise InsufficientSamplesError("m=%d < 1" % m)
+        raise InsufficientSamplesError("m=%d < 1"%m)
 
     if SDis.is_small(secret_distribution):
         m_ = m + n
@@ -1907,7 +2196,7 @@ def _primal_decode(n, alpha, q, secret_distribution=True, m=oo, success_probabil
             current[key] = bkz[key]
         for key in enum:
             current[key] = enum[key]
-        current[u"m"] = m_ - n if SDis.is_small(secret_distribution) else m_
+        current[u"m"]  = m_-n if SDis.is_small(secret_distribution) else m_
         return current
 
     depth = 6
@@ -1931,7 +2220,7 @@ def _primal_decode(n, alpha, q, secret_distribution=True, m=oo, success_probabil
             prev_direction = direction
             direction = -1
             if direction != prev_direction:
-                step = 1 + RR(step - 1) / 2
+                step = 1 + RR(step-1)/2
             delta_0m1 /= step
         elif current["red"] > current["babai_op"]:
             prev_direction = direction
@@ -1940,7 +2229,7 @@ def _primal_decode(n, alpha, q, secret_distribution=True, m=oo, success_probabil
         else:
             break
         if direction != prev_direction:
-            step = 1 + RR(step - 1) / 2
+            step = 1 + RR(step-1)/2
             depth -= 1
         if depth == 0:
             break
@@ -1950,8 +2239,66 @@ def _primal_decode(n, alpha, q, secret_distribution=True, m=oo, success_probabil
 
 primal_decode = partial(rinse_and_repeat, _primal_decode, decision=False, repeat_select={"m": False})
 
-
+
 # Dual Attack
+
+
+def _dual_scale_factor(secret_distribution, alpha=None, q=None, n=None, c=None):
+    """
+    Scale factor for dual attack.
+
+    :param secret_distribution: distribution of secret, see module level documentation for details
+    :param alpha: noise rate `0 ≤ α < 1`, noise has standard deviation `αq/\sqrt{2π}`
+    :param q: modulus `0 < q`
+    :param n: only used for sparse secrets
+    :param c: explicit constant `c`
+
+    EXAMPLE::
+
+        sage: from estimator import _dual_scale_factor
+        sage: _dual_scale_factor(True, 8./2^15, 2^15)
+        (1.00000000000000, 3.19153824321146)
+
+        sage: _dual_scale_factor((-1,1), alpha=8./2^15, q=2^15)
+        (3.90882009522336, 0.816496580927726)
+
+        sage: _dual_scale_factor(((-1,1), 64), alpha=8./2^15, q=2^15, n=256)
+        (6.38307648642292, 0.500000000000000)
+
+        sage: _dual_scale_factor((-3,3), alpha=8./2^15, q=2^15)
+        (1.59576912160573, 2.00000000000000)
+
+        sage: _dual_scale_factor(((-3,3), 64), alpha=8./2^15, q=2^15, n=256)
+        (2.95479025475795, 1.08012344973464)
+
+        sage: _dual_scale_factor((-3,2), alpha=8./2^15, q=2^15)
+        (1.79348966142733, 1.70782512765993)
+
+        sage: _dual_scale_factor(((-3,2), 64), alpha=8./2^15, q=2^15, n=256)
+        (3.27444914738684, 0.963068014212911)
+
+    ..  note :: This function assumes that the bounds are of opposite sign, and that the
+        distribution is centred around zero.
+    """
+    stddev = RR(stddevf(alpha*q))
+    # Calculate scaling in the case of bounded_uniform secret distribution
+    # NOTE: We assume a <= 0 <= b
+    if SDis.is_bounded_uniform(secret_distribution):
+        stddev_s = SDis.variance(secret_distribution, alpha=alpha, q=q, n=n).sqrt()
+        avg_s = SDis.mean(secret_distribution, q=q, n=n)
+        if c is None:
+            # |<v,s>| = |<w,e>| → c * \sqrt{n} * \sqrt{σ_{s_i}^2 + E(s_i)^2} == \sqrt{m} * σ
+            # TODO: we are assuming n == m here! The coefficient formula for general m
+            #       is the one below * sqrt(m/n)
+            c = RR(stddev/sqrt(stddev_s**2 + avg_s**2))
+    else:
+        stddev_s = stddev
+        c = RR(1)
+
+    stddev_s = RR(stddev_s)
+
+    return c, stddev_s
+
 
 def _dual(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.99,
           reduction_cost_model=reduction_default_cost):
@@ -2027,30 +2374,32 @@ def _dual(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.99,
     n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability)
 
     if m < 1:
-        raise InsufficientSamplesError("m=%d < 1" % m)
+        raise InsufficientSamplesError("m=%d < 1"%m)
 
     RR = parent(alpha)
-    f = lambda eps: RR(sqrt(log(1 / eps) / pi))  # noqa
+    f = lambda eps: RR(sqrt(log(1/eps)/pi))  # noqa
 
     if SDis.is_small(secret_distribution):
         m = m + n
-    log_delta_0 = log(f(success_probability) / alpha, 2) ** 2 / (4 * n * log(q, 2))
-    delta_0 = RR(2) ** log_delta_0
+    log_delta_0 = log(f(success_probability)/alpha, 2)**2 / (4*n*log(q, 2))
+    delta_0 = min(RR(2)**log_delta_0, RR(1.02190))  # at most LLL
     m_optimal = lattice_reduction_opt_m(n, q, delta_0)
     if m > m_optimal:
         m = m_optimal
     else:
-        log_delta_0 = log(f(success_probability) / alpha, 2) / m - RR(log(q, 2) * n) / (m ** 2)
-        delta_0 = RR(2 ** log_delta_0)
+        log_delta_0 = log(f(success_probability)/alpha, 2)/m - RR(log(q, 2)*n)/(m**2)
+        delta_0 = RR(2**log_delta_0)
 
     # check for valid delta
-    if delta_0 < 1:
-        raise OutOfBoundsError(u"δ_0 = %f < 1" % delta_0)
+    # TODO delta_0f(m) is HKZ reduction, and thus it is identical 1, i.e. meaningless.
+    # A better check here would be good.
+    if delta_0 < delta_0f(m):
+        raise OutOfBoundsError("delta_0 = %f < %f" % (delta_0, delta_0f(m)))
 
     ret = lattice_reduction_cost(reduction_cost_model, delta_0, m, B=log(q, 2))
     ret[u"m"] = m
     ret[u"d"] = m
-    ret[u"|v|"] = RR(delta_0 ** m * q ** (n / m))
+    ret[u"|v|"] = RR(delta_0**m * q**(n/m))
     return ret.reorder(["rop", "m"])
 
 
@@ -2081,27 +2430,27 @@ def dual_scale(n, alpha, q, secret_distribution,
 
         sage: dual_scale(*Param.Regev(256), secret_distribution=(-1,1))
             rop:  2^100.7
-              m:      546
+              m:      290
             red:  2^100.7
         delta_0: 1.006598
            beta:      185
          repeat:   2^62.0
               d:      546
-              c:   31.241
+              c:   31.271
 
         sage: dual_scale(*Param.Regev(256), secret_distribution=(-1,1), m=200)
             rop:  2^105.2
-              m:      456
+              m:      200
             red:  2^105.2
         delta_0: 1.006443
            beta:      192
          repeat:   2^68.0
               d:      456
-              c:   31.241
+              c:   31.271
 
         sage: dual_scale(*Param.Regev(256), secret_distribution=((-1,1), 64))
             rop:   2^91.9
-              m:      514
+              m:      258
             red:   2^91.9
         delta_0: 1.006948
            beta:      170
@@ -2115,60 +2464,53 @@ def dual_scale(n, alpha, q, secret_distribution,
     """
 
     n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability)
-
     RR = parent(alpha)
 
     # stddev of the error
-    e = RR(stddevf(alpha * q))
+    stddev = RR(stddevf(alpha*q))
 
-    if SDis.is_ternary(secret_distribution):
-        a, b = SDis.bounds(secret_distribution)
-        h = SDis.nonzero(secret_distribution, n)
-        e_ = RR(1)
-        if c is None:
-            c = RR(e * sqrt(2 * n - n) / sqrt(h))
-    else:
-        if not SDis.is_small(secret_distribution):
-            m = m - n
-        c = RR(1)
-        e_ = e
-        h = n
+    m_max = m
 
-    best = dual(n=n, alpha=alpha, q=q, m=m,
-                reduction_cost_model=reduction_cost_model)
+    if not SDis.is_small(secret_distribution):
+        m_max -= n  # We transform to normal form, spending n samples
+
+    c, stddev_s = _dual_scale_factor(secret_distribution, alpha=alpha, q=q, n=n, c=c)
+
+    best = dual(n=n, alpha=alpha, q=q, m=m, reduction_cost_model=reduction_cost_model)
     delta_0 = best["delta_0"]
 
     if use_lll:
-        scale = 2
+        rerand_scale = 2
     else:
-        scale = 1
+        rerand_scale = 1
 
     while True:
-        m_optimal = lattice_reduction_opt_m(n, q / c, delta_0)
-        m_ = ZZ(min(m_optimal, m + n))
+        m_optimal = lattice_reduction_opt_m(n, q/c, delta_0)
+        d = ZZ(min(m_optimal, m_max + n))
+        m = d-n
 
-        # the vector found will have norm
-        v = scale * delta_0 ** m_ * (q / c) ** (n / m_)
+        # the vector found will have norm v
+        v = rerand_scale * delta_0**d * (q/c)**(n/d)
 
         # each component has stddev v_
-        v_ = v / RR(sqrt(m_))
+        v_ = v/RR(sqrt(d))
 
         # we split our vector in two parts.
-        v_r = sigmaf(RR(e * sqrt(m_ - n) * v_))  # 1. v_r is multiplied with the error e (dimension m-n)
-        v_l = sigmaf(RR(c * e_ * sqrt(h) * v_))  # 2. v_l is the rounding noise (dimension n)
+        v_r = sigmaf(RR(stddev*sqrt(m)*v_))      # 1. v_r is multiplied with the error stddev (dimension m-n)
+        v_l = sigmaf(RR(c*stddev_s*sqrt(n)*v_))  # 2. v_l is the rounding noise (dimension n)
 
-        ret = lattice_reduction_cost(reduction_cost_model, delta_0, m_, B=log(q, 2))
+        ret = lattice_reduction_cost(reduction_cost_model, delta_0, d, B=log(q, 2))
 
         repeat = max(amplify_sigma(success_probability, (v_r, v_l), q), RR(1))
         if use_lll:
-            lll = BKZ.LLL(m_, log(q, 2))
+            lll = BKZ.LLL(d, log(q, 2))
         else:
             lll = None
         ret = ret.repeat(times=repeat, lll=lll)
 
-        ret[u"m"] = m_
+        ret[u"m"] = m
         ret[u"repeat"] = repeat
-        ret[u"d"] = m_
+        ret[u"d"] = d
         ret[u"c"] = c
 
         ret = ret.reorder(["rop", "m"])
@@ -2177,7 +2519,7 @@ def dual_scale(n, alpha, q, secret_distribution,
         if best is None:
             best = ret
 
-        if ret["red"] > best["red"]:
+        if ret["rop"] > best["rop"]:
             break
 
         best = ret
@@ -2185,10 +2527,7 @@ def dual_scale(n, alpha, q, secret_distribution,
 
     return best
 
-
-
-
-
+
 # Combinatorial
 
 def mitm(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.99):
@@ -2218,26 +2557,26 @@ def mitm(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.99):
         ret["m"] = 0
 
     if m < 1:
-        raise InsufficientSamplesError("m=%d < 1" % m)
+        raise InsufficientSamplesError("m=%d < 1"%m)
 
-    t = ceil(2 * sqrt(log(n)))
+    t = ceil(2*sqrt(log(n)))
     try:
         a, b = SDis.bounds(secret_distribution)
-        size = b - a + 1
+        size = b-a+1
     except ValueError:
-        size = alpha * q
+        size = (2*t*alpha*q) + 1
 
-    m_required = ceil(log(2 * n / (size ** (n / 2))) / log(2 * t * alpha))
+    m_required = ceil((log((2*n)/((size**(n/2))-1)))/(log(size/q)))
     if m is not None and m < m_required:
-        raise InsufficientSamplesError("m=%d < %d (required)" % (m, m_required))
+        raise InsufficientSamplesError("m=%d < %d (required)"%(m, m_required))
     else:
         m = m_required
 
-    if (m * (2 * alpha) > 1 - 1 / (2 * n)):
+    if ((3*t*alpha)*m > 1- 1/(2*n)):
         raise ValueError("Cannot find m to satisfy constraints (noise too big).")
 
-    ret["rop"] = RR(size ** (n / 2) * 2 * n * m)
-    ret["mem"] = RR(size ** (n / 2) * m)
+    ret["rop"] = RR(size**(n/2) * 2*n * m)
+    ret["mem"] = RR(size**(n/2) * m)
     ret["m"] += m
 
     return ret.reorder(["rop", "m", "mem"])
@@ -2260,7 +2599,7 @@ def _bkw_coded(n, alpha, q, secret_distribution=True, m=oo, success_probability=
 
     """
     n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability)
-    sigma = stddevf(alpha * q)  # [C:GuoJohSta15] use σ = standard deviation
+    sigma = stddevf(alpha*q)  # [C:GuoJohSta15] use σ = standard deviation
     RR = alpha.parent()
 
     cost = Cost()
@@ -2271,14 +2610,14 @@ def _bkw_coded(n, alpha, q, secret_distribution=True, m=oo, success_probability=
 
     b = ZZ(b)
     cost["b"] = b
-    l = b - 1
+    l = b - 1  # noqa
     cost["l"] = l
 
     try:
         secret_bounds = SDis.bounds(secret_distribution)
         d = secret_bounds[1] - secret_bounds[0] + 1
     except ValueError:
-        d = 3 * sigma  # TODO make this dependent on success_probability
+        d = 3*sigma      # TODO make this dependent on success_probability
 
     # cost["d"] = d
     # cost[u"γ"] = gamma
@@ -2290,7 +2629,7 @@ def _bkw_coded(n, alpha, q, secret_distribution=True, m=oo, success_probability=
         :param i: index
         :param sigma_set: target noise level
         """
-        return floor(b / (1 - log(12 * sigma_set ** 2 / ZZ(2) ** i, q) / 2))
+        return floor(b/(1-log(12*sigma_set**2/ZZ(2)**i, q)/2))
 
     def find_ntest(n, l, t1, t2, b):
         """
@@ -2306,20 +2645,20 @@ def _bkw_coded(n, alpha, q, secret_distribution=True, m=oo, success_probability=
 
         # there is no hypothesis testing because we have enough normal BKW
         # tables to cover all of of n
-        if t1 * b >= n:
+        if t1*b >= n:
             return 0
 
         # solve for nest by aiming for ntop == 0
         ntest = var("nest")
-        sigma_set = sqrt(q ** (2 * (1 - l / ntest)) / 12)
-        ncod = sum([N(i, sigma_set) for i in range(1, t2 + 1)])
-        ntop = n - ncod - ntest - t1 * b
+        sigma_set = sqrt(q**(2*(1-l/ntest))/12)
+        ncod = sum([N(i, sigma_set) for i in range(1, t2+1)])
+        ntop = n - ncod - ntest - t1*b
         try:
             ntest = round(find_root(0 == ntop, 0, n))
         except RuntimeError:
             # annoyingly we get a RuntimeError when find_root can't find a
             # solution, we translate to something more meaningful
-            raise ValueError("Cannot find parameters for n=%d, l=%d, t1=%d, t2=%d, b=%d" % (n, l, t1, t2, b))
+            raise ValueError("Cannot find parameters for n=%d, l=%d, t1=%d, t2=%d, b=%d"%(n, l, t1, t2, b))
         return ZZ(ntest)
 
     # we compute t1 from N_i by observing that any N_i ≤ b gives no advantage
@@ -2330,13 +2669,13 @@ def _bkw_coded(n, alpha, q, secret_distribution=True, m=oo, success_probability=
         ntest_ = find_ntest(n, l, t1, t2, b)
     else:
         ntest_ = ntest
-    sigma_set = sqrt(q ** (2 * (1 - l / ntest_)) / 12)
-    Ni = [N(i, sigma_set) for i in range(1, t2 + 1)]
+    sigma_set = sqrt(q**(2*(1-l/ntest_))/12)
+    Ni = [N(i, sigma_set) for i in range(1, t2+1)]
     t1 = len([e for e in Ni if e <= b])
 
     # there is no point in having more tables than needed to cover n
-    if b * t1 > n:
-        t1 = n // b
+    if b*t1 > n:
+        t1 = n//b
     t2 -= t1
 
     cost["t1"] = t1
@@ -2348,22 +2687,22 @@ def _bkw_coded(n, alpha, q, secret_distribution=True, m=oo, success_probability=
 
     # if there's no ntest then there's no `σ_{set}` and hence no ncod
     if ntest:
-        sigma_set = sqrt(q ** (2 * (1 - l / ntest)) / 12)
+        sigma_set = sqrt(q**(2*(1-l/ntest))/12)
         # cost[u"σ_set"] = RR(sigma_set)
-        ncod = sum([N(i, sigma_set) for i in range(1, t2 + 1)])
+        ncod = sum([N(i, sigma_set) for i in range(1, t2+1)])
     else:
         ncod = 0
 
     ntot = ncod + ntest
-    ntop = max(n - ncod - ntest - t1 * b, 0)
-    cost["ncod"] = ncod  # coding step
-    cost["ntop"] = ntop  # guessing step, typically zero
+    ntop = max(n - ncod - ntest - t1*b, 0)
+    cost["ncod"] = ncod    # coding step
+    cost["ntop"] = ntop    # guessing step, typically zero
     cost["ntest"] = ntest  # hypothesis testing
 
     # Theorem 1: quantization noise + addition noise
     s_var = SDis.variance(secret_distribution, alpha, q)
-    coding_variance = s_var * sigma_set ** 2 * ntot
-    sigma_final = RR(sqrt(2 ** (t1 + t2) * sigma ** 2 + coding_variance))
+    coding_variance = s_var * sigma_set**2 * ntot
+    sigma_final = RR(sqrt(2**(t1+t2) * sigma**2 + coding_variance))
     # cost[u"σ_final"] = RR(sigma_final)
 
     M = amplify_sigma(success_probability, sigmaf(sigma_final), q)
@@ -2371,42 +2710,42 @@ def _bkw_coded(n, alpha, q, secret_distribution=True, m=oo, success_probability=
         cost["rop"] = oo
         cost["m"] = oo
         return cost
-    m = (t1 + t2) * (q ** b - 1) / 2 + M
+    m = (t1+t2)*(q**b-1)/2 + M
     cost["m"] = RR(m)
 
     # Equation (7)
-    n_ = n - t1 * b
-    C0 = (m - n_) * (n + 1) * ceil(n_ / (b - 1))
-    assert (C0 >= 0)
+    n_ = n - t1*b
+    C0 = (m-n_) * (n+1) * ceil(n_/(b-1))
+    assert(C0 >= 0)
     # cost["C0(gauss)"] = RR(C0)
 
     # Equation (8)
-    C1 = sum([(n + 1 - i * b) * (m - i * (q ** b - 1) / 2) for i in range(1, t1 + 1)])
-    assert (C1 >= 0)
+    C1 = sum([(n+1-i*b)*(m - i*(q**b - 1)/2) for i in range(1, t1+1)])
+    assert(C1 >= 0)
     # cost["C1(bkw)"] = RR(C1)
 
     # Equation (9)
-    C2_ = sum([4 * (M + i * (q ** b - 1) / 2) * N(i, sigma_set) for i in range(1, t2 + 1)])
+    C2_ = sum([4*(M + i*(q**b - 1)/2)*N(i, sigma_set) for i in range(1, t2+1)])
     C2 = RR(C2_)
-    for i in range(1, t2 + 1):
-        C2 += RR(ntop + ntest + sum([N(j, sigma_set) for j in range(1, i + 1)])) * (M + (i - 1) * (q ** b - 1) / 2)
-    assert (C2 >= 0)
+    for i in range(1, t2+1):
+        C2 += RR(ntop + ntest + sum([N(j, sigma_set) for j in range(1, i+1)]))*(M + (i-1)*(q**b - 1)/2)
+    assert(C2 >= 0)
     # cost["C2(coded)"] = RR(C2)
 
     # Equation (10)
-    C3 = M * ntop * (2 * d + 1) ** ntop
-    assert (C3 >= 0)
+    C3 = M*ntop*(2*d + 1)**ntop
+    assert(C3 >= 0)
     # cost["C3(guess)"] = RR(C3)
 
     # Equation (11)
-    C4_ = 4 * M * ntest
-    C4 = C4_ + (2 * d + 1) ** ntop * (cfft * q ** (l + 1) * (l + 1) * log(q, 2) + q ** (l + 1))
-    assert (C4 >= 0)
+    C4_ = 4*M*ntest
+    C4 = C4_ + (2*d+1)**ntop * (cfft * q**(l+1) * (l+1) * log(q, 2) + q**(l+1))
+    assert(C4 >= 0)
     # cost["C4(test)"] = RR(C4)
 
-    C = (C0 + C1 + C2 + C3 + C4) / (erf(d / sqrt(2 * sigma)) ** ntop)  # TODO don't ignore success probability
+    C = (C0 + C1 + C2 + C3+ C4)/(erf(d/sqrt(2*sigma))**ntop)  # TODO don't ignore success probability
     cost["rop"] = RR(C)
-    cost["mem"] = (t1 + t2) * q ** b
+    cost["mem"] = (t1+t2)*q**b
 
     cost = cost.reorder(["rop", "m", "mem", "b", "t1", "t2"])
 
@@ -2448,22 +2787,22 @@ def bkw_coded(n, alpha, q, secret_distribution=True, m=oo, success_probability=0
 
     def _run(b=2):
         # the noise is 2**(t1+t2) * something so there is no need to go beyond, say, q**2
-        r = binary_search(_bkw_coded, 2, min(n // b, ceil(2 * log(q, 2))), "t2",
-                          predicate=lambda x, best: x["rop"] <= best["rop"] and (best["m"] > m or x["m"] <= m),
+        r = binary_search(_bkw_coded, 2, min(n//b, ceil(2*log(q, 2))), "t2",
+                          predicate=lambda x, best: x["rop"]<=best["rop"] and (best["m"]>m or x["m"]<=m),
                           b=b, n=n, alpha=alpha, q=q,
                           secret_distribution=secret_distribution,
                           success_probability=success_probability,
                           m=m)
         return r
 
-    best = binary_search(_run, 2, 3 * bstart, "b",
-                         predicate=lambda x, best: x["rop"] <= best["rop"] and (best["m"] > m or x["m"] <= m))
+    best = binary_search(_run, 2, 3*bstart, "b",
+                         predicate=lambda x, best: x["rop"]<=best["rop"] and (best["m"]>m or x["m"]<=m))
     # binary search cannot fail. It just outputs some X with X["oracle"]>m.
     if best["m"] > m:
-        raise InsufficientSamplesError("m=%d < %d (required)" % (m, best["m"]))
+        raise InsufficientSamplesError("m=%d < %d (required)"%(m, best["m"]))
     return best
 
-
+
 # Algebraic
 
 @cached_function
@@ -2486,31 +2825,31 @@ def gb_cost(n, D, omega=2):
     """
 
     if have_magma():
-        R = magma.PowerSeriesRing(QQ, 2 * n)
+        R = magma.PowerSeriesRing(QQ, 2*n)
         z = R.gen(1)
         coeff = lambda f, d: f.Coefficient(d)  # noqa
     else:
-        R = PowerSeriesRing(QQ, "z", 2 * n)
+        R = PowerSeriesRing(QQ, "z", 2*n)
         z = R.gen()
         coeff = lambda f, d: f[d]  # noqa
 
     s = 1
     for d, m in D:
-        s *= (1 - z ** d) ** m
+        s *= (1-z**d)**m
 
-    s = s / (1 - z) ** n
+    s = s / (1-z)**n
 
     retval = Cost([("rop", oo), ("Dreg", oo)])
 
-    for dreg in range(2 * n):
+    for dreg in range(2*n):
         if coeff(s, dreg) < 0:
             break
     else:
         return retval
 
     retval["Dreg"] = dreg
-    retval["rop"] = binomial(n + dreg, dreg) ** omega
-    retval["mem"] = binomial(n + dreg, dreg) ** 2
+    retval["rop"] = binomial(n + dreg, dreg)**omega
+    retval["mem"] = binomial(n + dreg, dreg)**2
 
     return retval
 
@@ -2536,12 +2875,12 @@ def arora_gb(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.
     """
 
     n, alpha, q, success_probability = Param.preprocess(n, alpha, q, success_probability,
-                                                        prec=2 * log(n, 2) * n)
+                                                        prec=2*log(n, 2)*n)
 
     RR = alpha.parent()
-    stddev = RR(stddevf(RR(alpha) * q))
+    stddev = RR(stddevf(RR(alpha)*q))
 
-    if stddev >= 1.1 * sqrt(n):
+    if stddev >= 1.1*sqrt(n):
         return {"rop": oo}
 
     if SDis.is_small(secret_distribution):
@@ -2549,28 +2888,28 @@ def arora_gb(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.
             a, b = SDis.bounds(secret_distribution)
             d2 = b - a + 1
         except ValueError:
-            d2 = 2 * ceil(3 * stddev) + 1
+            d2 = 2*ceil(3*stddev)+1
         d2 = [(d2, n)]
     else:
         d2 = []
 
-    ps_single = lambda C: RR(1 - (2 / (C * RR(sqrt(2 * pi))) * exp(-C ** 2 / 2)))  # noqa
+    ps_single = lambda C: RR(1 - (2/(C*RR(sqrt(2*pi))) * exp(-C**2/2)))  # noqa
 
-    m_req = floor(exp(RR(0.75) * n))
+    m_req = floor(exp(RR(0.75)*n))
     d = n
-    t = ZZ(floor((d - 1) / 2))
-    C = t / stddev
+    t = ZZ(floor((d-1)/2))
+    C = t/stddev
     pred = gb_cost(n, [(d, m_req)] + d2, omega)
     pred["t"] = t
     pred["m"] = m_req
     pred = pred.reorder(["rop", "m", "Dreg", "t"])
 
-    t = ceil(t / 3)
+    t = ceil(t/3)
     best = None
     stuck = 0
     for t in srange(t, n):
-        d = 2 * t + 1
-        C = RR(t / stddev)
+        d = 2*t + 1
+        C = RR(t/stddev)
         if C < 1:  # if C is too small, we ignore it
             continue
         # Pr[success]^m = Pr[overall success]
@@ -2603,10 +2942,10 @@ def arora_gb(n, alpha, q, secret_distribution=True, m=oo, success_probability=0.
                     break
     return best
 
-
+
 # Toplevel function
 
-def estimate_lwe(n, alpha=None, q=None, secret_distribution=True, m=oo,  # noqa
+def estimate_lwe(n, alpha=None, q=None, secret_distribution=True, m=oo, # noqa
                  reduction_cost_model=reduction_default_cost,
                  skip=("mitm", "arora-gb", "bkw")):
     """
@@ -2624,28 +2963,28 @@ def estimate_lwe(n, alpha=None, q=None, secret_distribution=True, m=oo,  # noqa
 
         sage: from estimator import estimate_lwe, Param, BKZ
         sage: d = estimate_lwe(*Param.Regev(128))
-        usvp: rop:  ≈2^51.1,  red:  ≈2^51.1,  δ_0: 1.009214,  β:  102,  d:  357,  m:      610
+        usvp: rop:  ≈2^51.1,  red:  ≈2^51.1,  δ_0: 1.009214,  β:  102,  d:  357,  m:      228
          dec: rop:  ≈2^56.8,  m:      235,  red:  ≈2^56.8,  δ_0: 1.009311,  β:   99,  d:  363,  babai:  ≈2^42.2,  ...
         dual: rop:  ≈2^74.7,  m:      376,  red:  ≈2^74.7,  δ_0: 1.008810,  β:  111,  d:  376,  |v|:  736.521,  ...
 
         sage: d = estimate_lwe(**Param.LindnerPeikert(256, dict=True))
-        usvp: rop: ≈2^131.1,  red: ≈2^131.1,  δ_0: 1.005788,  β:  229,  d:  594,  m:      896
-         dec: rop: ≈2^138.4,  m:      334,  red: ≈2^138.4,  δ_0: 1.006009,  β:  215,  d:  590,  babai: ≈2^123.3, ...
-        dual: rop: ≈2^166.0,  m:      624,  red: ≈2^166.0,  δ_0: 1.005479,  β:  249,  repeat: ≈2^131.0,  d:  624, ...
+        usvp: rop: ≈2^131.1,  red: ≈2^131.1,  δ_0: 1.005788,  β:  229,  d:  594,  m:      337
+         dec: rop: ≈2^138.4,  m:      334,  red: ≈2^138.4,  δ_0: 1.006009,  β:  215,  d:  590,  babai: ≈2^123.3,  ...
+        dual: rop: ≈2^166.0,  m:      368,  red: ≈2^166.0,  δ_0: 1.005479,  β:  249,  repeat: ≈2^131.0,  d:  624,  ...
 
         sage: d = estimate_lwe(*Param.LindnerPeikert(256), secret_distribution=(-1,1))
-        usvp: rop:  ≈2^96.5,  red:  ≈2^96.5,  δ_0: 1.006744,  β:  179,  d:  506,  m:      870
+        usvp: rop:  ≈2^96.5,  red:  ≈2^96.5,  δ_0: 1.006744,  β:  179,  d:  506,  m:      249
          dec: rop: ≈2^138.4,  m:      334,  red: ≈2^138.4,  δ_0: 1.006009,  β:  215,  d:  590,  babai: ≈2^123.3,  ...
-        dual: rop: ≈2^108.5,  m:      510,  red: ≈2^108.4,  δ_0: 1.006395,  β:  195,  repeat:  ≈2^73.5,  d:  510, ...
+        dual: rop: ≈2^108.5,  m:      270,  red: ≈2^108.4,  δ_0: 1.006395,  β:  195,  repeat:  ≈2^73.5,  d:  510,  ...
 
         sage: d = estimate_lwe(*Param.LindnerPeikert(256), secret_distribution=(-1,1), reduction_cost_model=BKZ.sieve)
-        usvp: rop:  ≈2^80.7,  red:  ≈2^80.7,  δ_0: 1.006744,  β:  179,  d:  506,  m:      870
+        usvp: rop:  ≈2^80.7,  red:  ≈2^80.7,  δ_0: 1.006744,  β:  179,  d:  506,  m:      249
          dec: rop: ≈2^111.8,  m:      369,  red: ≈2^111.8,  δ_0: 1.005423,  β:  253,  d:  625,  babai:  ≈2^97.0,  ...
-        dual: rop:  ≈2^90.6,  m:      524,  red:  ≈2^90.6,  δ_0: 1.006065,  β:  212,  repeat:  ≈2^53.5,  d:  524, ...
+        dual: rop:  ≈2^90.6,  m:      284,  red:  ≈2^90.6,  δ_0: 1.006065,  β:  212,  repeat:  ≈2^53.5,  d:  524,  ...
 
         sage: d = estimate_lwe(n=100, alpha=8/2^20, q=2^20, skip="arora-gb")
-        mitm: rop: ≈2^161.1,  m:       11,  mem: ≈2^153.5
-        usvp: rop:  ≈2^25.4,  red:  ≈2^25.4,  δ_0: 1.013310,  β:   40,  d:  141,  m:      548
+        mitm: rop: ≈2^329.2,  m:       23,  mem: ≈2^321.5
+        usvp: rop:  ≈2^25.4,  red:  ≈2^25.4,  δ_0: 1.013310,  β:   40,  d:  141,  m:       40
          dec: rop:  ≈2^32.7,  m:      156,  red:  ≈2^32.7,  δ_0: 1.021398,  β:   40,  d:  256,  babai:        1,  ...
         dual: rop:  ≈2^34.5,  m:      311,  red:  ≈2^34.5,  δ_0: 1.014423,  β:   40,  d:  311,  |v|:  ≈2^12.9,  ...
          bkw: rop:  ≈2^56.8,  m:  ≈2^43.5,  mem:  ≈2^44.5,  b:   2,  t1:   5,  t2:  18,  l:   1,  ncod:  84,  ...
@@ -2710,12 +3049,9 @@ def estimate_lwe(n, alpha=None, q=None, secret_distribution=True, m=oo,  # noqa
         try:
             tmp = algf(n, alpha, q, secret_distribution=secret_distribution, m=m)
             results[alg] = tmp
-            logger.info("%s: %s" % (("%%%ds" % alg_width) % alg, results[alg].str(**cost_kwds)))
+            logger.info("%s: %s"%(("%%%ds" % alg_width) % alg, results[alg].str(**cost_kwds)))
         except InsufficientSamplesError as e:
-            logger.info("%s: %s" % (("%%%ds" % alg_width) % alg,
-                                    "insufficient samples to run this algorithm: '%s'" % str(e)))
+            logger.info("%s: %s"%(("%%%ds" % alg_width) % alg,
+                                  "insufficient samples to run this algorithm: '%s'"%str(e)))
 
     return results
-
-
-
