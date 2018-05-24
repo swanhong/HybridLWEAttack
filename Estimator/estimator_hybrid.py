@@ -1,4 +1,5 @@
 from estimator import *
+import pprint
 
 def hyb_estimate(f, n, alpha, q, bound, secret_distribution=True, **kwds):
     '''
@@ -194,7 +195,7 @@ def MITM_estimator(n, alpha, q, sparse = 64, start_bound = 10, Max_bound = 13, s
     best = None
     bound_best = bound
     print 'Chosen Parameters : '
-    print '     n = %5d, log(q) = %5.1f, alpha = %5.1f' % (n, log(q,2), alpha)
+    print '     n = %5d, log(q) = %5.1f, stddev = %5.2f, HW(s) = %4d,' % (n, log(q,2), RR(stddevf(alpha * q)), sparse)
     print
     Level = 0
     step = float(step_size)
@@ -206,7 +207,7 @@ def MITM_estimator(n, alpha, q, sparse = 64, start_bound = 10, Max_bound = 13, s
 
         res = mitm_hyb(n, alpha, q, bound, secret_distribution=((-1, 1), sparse))
         
-        #print "Optimizing with beta = %4d . . ." % res["beta"]
+        print "Optimizing with beta = %4d . . ." % res["beta"]
 
         if best is None or res["rop"] < best["rop"]:            
             best = res
@@ -227,4 +228,4 @@ def MITM_estimator(n, alpha, q, sparse = 64, start_bound = 10, Max_bound = 13, s
     print '             (For simplicity, we set k1 = k2 = k/2)'
     print
     print "== Details"
-    print best
+    pprint.pprint(best)
