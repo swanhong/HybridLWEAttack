@@ -1,7 +1,7 @@
 # HybridLWEAttack
 
 Our "estimator_hybrid.py" estimates the bit-security, given parameter algorithm.
-We uses functions in "estimator.py" made by Albrecht [Alb17]
+We uses functions in "estimator.py" made by Albrecht et al [[APS15]](https://eprint.iacr.org/2015/046)
 and the high-level structure of our estimator "estimator_hybrid.py" is from "estimator.py".
 
 ### How to Run
@@ -17,12 +17,11 @@ EXAMPLE :\
     
     
     
-    \'
+'''    
     Chosen Parameters : 
      n =  8192, log(q) = 125.0, stddev =  3.19, HW(s) =   64,
      
-
-	Start Estimation . . .
+     Start Estimation . . .
 
 Optimizing with beta =  240 . . .
 Optimizing with beta =  247 . . .
@@ -48,4 +47,4 @@ Optimizing with beta =  244 . . .
           h1:        7
           h2:        9
          mem:   2^80.8
-         \'
+'''
