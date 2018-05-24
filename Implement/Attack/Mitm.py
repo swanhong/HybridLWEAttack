@@ -210,7 +210,7 @@ def sgnvar(v, bound, q):
     return bin, index
 
 
-def dim_error_tradeoff(A, c, u, beta, h, s, k, num_sample = None, float_type="double", use_lll = True):
+def dim_error_tradeoff(A, c, u, beta, h, s, k, num_sample = None, float_type="mpfr", use_lll = True):
     """
 
     :param A:    LWE matrix
@@ -362,7 +362,7 @@ def generate_table(S, q):
 
 	# Generate (binary) hash table T induced from locality hash function 'sgn'
 
-    print 'Generating table ... '
+    #print 'Generating table ... '
 
     T = {}
     
@@ -377,8 +377,8 @@ def generate_table(S, q):
             T[sgnvec] = []
             T[sgnvec].append(v)
 
-    print ' - Done'
-    print
+    #print ' - Done'
+    #print
 
     return T
 
@@ -394,12 +394,12 @@ def noisy_search(q, T, bound, query):
     if len(index) == len(sgn_):
         return [0] * len(sgn_)
 
-    print ' - Current number of x in sgn\'(query) = ', len(index)
+    #print ' - Current number of x in sgn\'(query) = ', len(index)
 
     v = check_collision(query, sgn_, T, index, 0, bound)
 
-    sys.stdout.write("\033[F")
-    sys.stdout.write("\033[K")
+    #sys.stdout.write("\033[F")
+    #sys.stdout.write("\033[K")
 
     return v
 
@@ -443,10 +443,10 @@ def data_gen(A, ell):
     A = A.augment(Count)
     S_.add(tuple([0] * (m+1)))
     S.add(tuple([0] * m))
-    print 'Making a dataset S = { YA_2 * s : HW(s) < ell }...'
+    #print 'Making a dataset S = { YA_2 * s : HW(s) < ell }...'
 
     for _ in range(ell):
-        print ' - Processing with hamming weight ', _, '... '
+        #print ' - Processing with hamming weight ', _, '... '
 
         TMP = set()
         TMP2 = set()
@@ -461,11 +461,11 @@ def data_gen(A, ell):
         S_ = S_.union(TMP)
         S = S.union(TMP2)
 
-        sys.stdout.write("\033[F")
-        sys.stdout.write("\033[K")
+        #sys.stdout.write("\033[F")
+        #sys.stdout.write("\033[K")
 
-    print ' - Done'
-    print
+    #print ' - Done'
+    #print
 
     return S
 
@@ -505,31 +505,46 @@ def Mitm_on_LWE(A, c, u, bound, ell, check_unif = False):
     T = generate_table(S, q)
     is_LWE = False
 
-    print '** Mitm with (YA_2, Yc) ** '
+    print 'Table size = %d' % len(S)
+    print
 
+    print '** Mitm with (YA_2, Yc) ** '
+    print 
+
+    count = 0
+    print count
     for v in S:
+
         v = vector(K, v)
         query = c - v
         query = balanced_lift(query)
         
+        sys.stdout.write("\033[F")
+        sys.stdout.write("\033[K")
+
+        count += 1
+        print 'Number of noisy searches = %d' % count
+
         res = noisy_search(q, T, bound, query)
+
+        
 
         if res is not None:
             is_LWE = True
-            if A.nrows() >= A.ncols():
-                print 'query            :', query
-                print 'collision in S   :', res
-                print
-                s = solveLA(A, c, query, res, q)
-                s = vector(ZZ, s)
+            #if A.nrows() >= A.ncols():
+                #print 'query            :', query
+                #print 'collision in S   :', res
+                #print
+                #s = solveLA(A, c, query, res, q)
+                #s = vector(ZZ, s)
             break
     
     if is_LWE == True:
-        if A.nrows() < A.ncols():
-            print ' - Input is LWE'
-        else:
-            print 'Input is from LWE samples with secret s:'
-            print s
+        #if A.nrows() < A.ncols():
+        #    print ' - Input is LWE'
+        #else:
+        print ' - Input is LWE'
+            #return s
 
     else:
         print ' - Input is uniform'
@@ -538,13 +553,22 @@ def Mitm_on_LWE(A, c, u, bound, ell, check_unif = False):
     if check_unif is True:
         print
         print '** Mitm with (YA_2, Yu) **'
+        print
 
         is_LWE = False
-
+        count = 0
+        print count
         for v in S:
+
             v = vector(K, v)
             query = u - v
             query = balanced_lift(query)
+
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
+
+            count += 1
+            print 'Number of noisy searches = %d' % count
 
             res = noisy_search(q, T, bound, query)
 
@@ -557,25 +581,8 @@ def Mitm_on_LWE(A, c, u, bound, ell, check_unif = False):
 
         else:
             print ' - Input is uniform'
-   
 
-def hybrid_mitm(A, c, u, beta, h, s, k, num_sample = None, ell = None, float_type="double", check_unif = False):
-    
-    # if flag = False, then don't check for uniform vector u
-
-    # Lattice reduction stage
-    E, f_c, f_u, bound = dim_error_tradeoff(A, c, u, beta, h, s, k, num_sample = num_sample, float_type=float_type)
-
-    print 'Bound setting = %5.2f, q = %d' %(sqrt(2*pi) * 2 * bound, A.base_ring().order())
-    print
-
-    if ell is None:
-    	ell = h
-
-    # MITM stage
-    Mitm_on_LWE(E, f_c, f_u, sqrt(2*pi) * 2 * bound, ell, check_unif = check_unif)
-
-def hybrid_mitm_(n, q, beta, h, k, alpha = None, tau = None, ell = None, float_type="double", check_unif = False):
+def hybrid_mitm(n, q, h, beta, k, alpha = None, tau = None, ell = None, float_type="mpfr", check_unif = True):
 
     if tau is None:
         tau = 30
@@ -588,10 +595,9 @@ def hybrid_mitm_(n, q, beta, h, k, alpha = None, tau = None, ell = None, float_t
     f_c = f_c.list()
     f_u = f_u.list()
 
-    print s[tau:]
-
+    print 'Performing Dimension-error trade-off . . .' 
+    print
     for i in range(1, tau):
-        print 'Generating ...' 
         A2, c2, u2, s2 = gen_instance(n, q, h, s = s)
         E2, f_c2, f_u2, bound = dim_error_tradeoff(A2, c2, u2, beta, h, s, k, num_sample = 1, float_type=float_type)
         E = E.stack(E2)
@@ -601,122 +607,16 @@ def hybrid_mitm_(n, q, beta, h, k, alpha = None, tau = None, ell = None, float_t
     f_c = vector(K, f_c)
     f_u = vector(K, f_u)
 
-    print 'Bound setting = %5.2f, q = %d' %(sqrt(2*pi) * 2 * bound, A.base_ring().order())
+    
+    print 'New k-dim samples have error bound = %5.2f, where q = %d' %(sqrt(2*pi) * 2 * bound, A.base_ring().order())
     print
 
     if ell is None:
     	ell = h
 
-    # MITM stage
-    Mitm_on_LWE(E, f_c, f_u, sqrt(2*pi) * 2 * bound, ell, check_unif = check_unif)
-
-def silke(A, c, beta, h, max_loops = 16, num_sample = None, float_type="double", use_lll = True):
-    """
-
-    :param A:    LWE matrix
-    :param c:    LWE vector
-    :param beta: BKW block size
-    :param h: 	 Hamming weight of secret
-    :param k:    LWE dim after tradeoff
-    :param num_sample:  number of new samples to generate
-
-    """
-
-    from fpylll import BKZ, IntegerMatrix, LLL, GSO
-    from fpylll.algorithms.bkz2 import BKZReduction as BKZ2
-
-    n = A.ncols()
-    q = A.base_ring().order()
-    K = GF(q, proof=False)
-
-    scale = round(8 * sqrt(n) / sqrt(2*pi*h))
-    scale = ZZ(scale)
-    
-    L = dual_instance1(A, scale=scale)
-    L = IntegerMatrix.from_matrix(L)
-
-    L1 = copy(L)
-    L1 = LLL.reduction(L1, flags=LLL.VERBOSE)
-    M = GSO.Mat(L1, float_type=float_type)
-    bkz = BKZ2(M)
-    param = BKZ.Param(block_size=beta,
-    				  strategies=BKZ.DEFAULT_STRATEGY,
-    				  auto_abort=True,
-    				  max_loops=max_loops,
-    				  flags=BKZ.VERBOSE|BKZ.AUTO_ABORT|BKZ.MAX_LOOPS)
-    bkz(param)
-    
-    H = copy(L1)
-    
-    f_c = []
-    V = set()
-    y_i = vector(ZZ, tuple(L[0]))
-    ft = apply_short1(y_i, A, c, scale=scale)[1]
-    f_c.append(ft)
-
-    v = L1[0].norm()
-    v_ = v/sqrt(L1.ncols)
-    v_r = 3.2*sqrt(L1.ncols - A.ncols())*v_/scale
-    v_l = sqrt(h)*v_
-
-    print 'Expected log(E[error]) = %5.1f, BKZ vector log(||y_1||) = %5.1f' % (log(sqrt(v_r**2 + v_l**2), 2), log(v, 2))
-
-    print 'Current |Y| : ', len(V)
-    	
-    if num_sample is None:
-    	num_sample = 30
-
-    count = 0
-    if use_lll is True:
-        while len(V) < num_sample:
-            count += 1
-            M = GSO.Mat(L, float_type=float_type)
-            bkz = BKZ2(M)
-            bkz.randomize_block(0, L.nrows, density=5)
-            LLL.reduction(L)
-            y_i = vector(ZZ, tuple(L[0]))
-            if L[0].norm() > H[0].norm():
-                L = copy(H)
-
-            sys.stdout.write("\033[F")
-            sys.stdout.write("\033[K")
-
-            flag = len(V)
-            V.add(y_i.norm())
-            if flag != len(V):
-                ftmp = apply_short1(y_i, A, c, scale=scale)[1]
-                f_c.append(ftmp)
-            print '# of LLL : %d, Current |Y| : %d' % (count, len(V))
-
-    else:
-        while len(V) < num_sample:
-            count += 1
-            M = GSO.Mat(L, float_type=float_type)
-            bkz = BKZ2(M)
-            bkz.randomize_block(0, L.nrows, density=3)
-            bkz(param)
-            y_i = vector(ZZ, tuple(L[0]))
-            if L[0].norm() > H[0].norm():
-                L = copy(H)
-
-            sys.stdout.write("\033[F")
-            sys.stdout.write("\033[K")
-
-            flag = len(V)
-            V.add(y_i.norm())
-            if flag != len(V):
-                ftmp = apply_short1(y_i, A, c, scale=scale)[1]
-                f_c.append(ftmp)
-            print '# of BKZ : %d, Current |Y| : %d' % (count, len(V))
-
-
-    print	
-    print 'log(E[error]) : (%5.1f, %5.1f), log(E[||y_i||]) = (%5.1f, %5.1f) ' \
-    	% (log_mean(f_c), log_stddev(f_c), log_mean(V), log_stddev(V))
-
+    print 'Start MITM on the k-dim samples . . .'
     print
 
-    return f_c
-
-
+    # MITM stage
+    Mitm_on_LWE(E, f_c, f_u, sqrt(2*pi) * 2 * bound, ell, check_unif = check_unif)
     

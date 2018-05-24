@@ -1,49 +1,43 @@
-### Task
+## Attack Implementation
 
-- Dimension을 높이는 경우, 너무 낮은 block size를 사용하면 bkz에서 오류 발생.
-Infinite loop in babai 라는데, precision 문제로 생각됨.
+"mitm.py" is an attack code for Sage.
+This is just for a proof-of-concept of the hybrid attack, and hence it is definitely not optimized.
 
-- One BKZ & Iterative LLL 전략은 정말 잘 작동하는걸까?
-적당히 큰 Param에 대해 실험하고 싶은데 자꾸 Infinite loop 오류가 나서 확인할수가 없고, 일단 Albrecht가 주장하는 n = 100, q = next_prime(2^23), h = 20, beta = 50에 대해 LLL = 256회를 수행하면 서로 다른 벡터가 별로 안 나옴
+### How to run
 
-- 적당히 작은 Param에 대한 실험은 성공함!
+The most high-level function is **hybrid_mitm**.
+It takes the following input
 
-### How to use
+    n, q, alpha (=8/q default) 	: LWE parameters
+    h 						: the hamming weight of secret vector
+    beta 					: BKZ blocksize
+    k						: LWE dim after Dim-Error tradeoff
+    tau (= 30 default)			: LWE sample number after Dim-Error tradeoff
+    ell (= h default)			: MITM parameter (hamming weight bound)
 
-## Requirements
+and generate LWE sample (A, **c**) and Uniform vector **u**,
+and perform the hybrid MITM attack on (A, **c**), and then on (A, **u**).
+  
+EXAMPLE :\
+    * sage: from Mitm import *\
+    * sage: n = 50; q = next_prime(2^18); h = 8; beta = 20; k = 30;*\
+    * sage: hybrid_mitm(n, q, h, beta, k)
+    
+    Performing Dimension-error trade-off . . .
 
-Run in Python
+    New k-dim samples have error bound = 405.96, where q = 16411
 
-- Sage
-- LWE-estimator (by Alb)
-- fpylll
+    Start MITM on the k-dim samples . . .
 
-## Example
+    Table size = 451
+    ** Mitm with (YA_2, Yc) ** 
 
-A, c, u, s = gen_instance(n, q, h, alpha, m)
-''' 
-Input Params
-n :		LWE dim
-q :		LWE mod
-h :	 	HW(s)
-alpha : 	8/q (Default)
-m :		n (Default)
+    Number of noisy searches = 48
+     - Input is LWE
 
-Output Params
-(A, c) : 	LWE instance
-u :		Uniform vector in GF(Z_q)
-s :		Secret
-'''
+    ** Mitm with (YA_2, Yu) **
 
-hybrid_mitm(A, c, u, beta, h, s, k, num_sample, ell, check_unif)
-'''
-Solves LWE with input (A,c) by Hybrid-Mitm strategy 
-(This is void, and print the result by print)
+    Number of noisy searches = 451
+     - Input is uniform    
 
-Input Params
-beta :		BKZ block size
-k :			LWE dim after trade-off
-num_sample :	Desired LWE samples after trade-off
-ell :			Presumed HW(s_2)
-check_unif :	Flag standing for applying attack also with (A,u)
-'''
+

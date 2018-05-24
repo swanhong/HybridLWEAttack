@@ -189,7 +189,7 @@ def dual_scale_hyb(n, alpha, q, bound, k1, k2, h1, h2, secret_distribution,
 
     return best
 
-def MITM_estimator(n, alpha, q, sparse = 64, start_bound = 10, Max_bound = 13, step_size = 1):
+def MITM_estimator(n, alpha, q, h = 64, start_bound = 10, Max_bound = 13, step_size = 1):
     bound = float(start_bound)
     mitm_hyb = partial(hyb_estimate, dual_scale_hyb)
     best = None
@@ -205,7 +205,7 @@ def MITM_estimator(n, alpha, q, sparse = 64, start_bound = 10, Max_bound = 13, s
 
     while Level <= 2:
 
-        res = mitm_hyb(n, alpha, q, bound, secret_distribution=((-1, 1), sparse))
+        res = mitm_hyb(n, alpha, q, bound, secret_distribution=((-1, 1), h))
         
         print "Optimizing with beta = %4d . . ." % res["beta"]
 
