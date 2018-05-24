@@ -18,7 +18,7 @@ EXAMPLE :\
     * sage: n = 8192\
     * sage: q = next_prime(2^125)\
     * sage: alpha = 8 / q\
-    * sage: h = 64 # default 64
+    * sage: h = 64 # default 64\
     * sage: MITM_estimator(n, alpha, q, h)
     
     
@@ -76,7 +76,7 @@ and perform the hybrid MITM attack on (A, **c**), and then on (A, **u**).
   
 EXAMPLE :\
     * sage: from Mitm import *\
-    * sage: n = 50; q = next_prime(2^18); h = 8; beta = 20; k = 30;*\
+    * sage: n = 50; q = next_prime(2^18); h = 8; beta = 20; k = 30;\
     * sage: hybrid_mitm(n, q, h, beta, k)
     
     Performing Dimension-error trade-off . . .

@@ -8,10 +8,10 @@ This is just for a proof-of-concept of the hybrid attack, and hence it is defini
 The most high-level function is **hybrid_mitm**.
 It takes the following input
 
-    n, q, alpha (=8/q default) 	: LWE parameters
-    h 						: the hamming weight of secret vector
+    n, q, alpha (=8/q default) 		: LWE parameters
+    h 					: the hamming weight of secret vector
     beta 					: BKZ blocksize
-    k						: LWE dim after Dim-Error tradeoff
+    k					: LWE dim after Dim-Error tradeoff
     tau (= 30 default)			: LWE sample number after Dim-Error tradeoff
     ell (= h default)			: MITM parameter (hamming weight bound)
 
@@ -20,7 +20,7 @@ and perform the hybrid MITM attack on (A, **c**), and then on (A, **u**).
   
 EXAMPLE :\
     * sage: from Mitm import *\
-    * sage: n = 50; q = next_prime(2^18); h = 8; beta = 20; k = 30;*\
+    * sage: n = 50; q = next_prime(2^18); h = 8; beta = 20; k = 30;\
     * sage: hybrid_mitm(n, q, h, beta, k)
     
     Performing Dimension-error trade-off . . .
@@ -30,6 +30,7 @@ EXAMPLE :\
     Start MITM on the k-dim samples . . .
 
     Table size = 451
+    
     ** Mitm with (YA_2, Yc) ** 
 
     Number of noisy searches = 48
