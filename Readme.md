@@ -64,10 +64,10 @@ This is just for a proof-of-concept of the hybrid attack, and hence it is defini
 The most high-level function is **hybrid_mitm**.
 It takes the following input
 
-    n, q, alpha (=8/q default) 	: LWE parameters
-    h 						: the hamming weight of secret vector
+    n, q, alpha (=8/q default) 		: LWE parameters
+    h 					: the hamming weight of secret vector
     beta 					: BKZ blocksize
-    k						: LWE dim after Dim-Error tradeoff
+    k					: LWE dim after Dim-Error tradeoff
     tau (= 30 default)			: LWE sample number after Dim-Error tradeoff
     ell (= h default)			: MITM parameter (hamming weight bound)
 
