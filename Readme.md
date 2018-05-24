@@ -17,9 +17,9 @@ EXAMPLE :\
     
     
     
-'''    
-    Chosen Parameters : 
-     n =  8192, log(q) = 125.0, stddev =  3.19, HW(s) =   64,
+
+    'Chosen Parameters :' 
+     'n =  8192, log(q) = 125.0, stddev =  3.19, HW(s) =   64,'
      
      Start Estimation . . .
 
