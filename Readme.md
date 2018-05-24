@@ -33,17 +33,17 @@ EXAMPLE :\
                  (For simplicity, we set k1 = k2 = k/2)
 
     == Details
-                 rop:  2^129.9
-                   m:   2^12.8
-                 red:  2^102.3
-          delta_0: 1.005603
-               beta:      240
-            repeat:  170.419
-                    d:   2^12.8
-                    c:   23.025
-               post:   2^97.0
-        prob_inv:   2^27.6
-                    k:   2^12.2
-                  h1:        7
-                  h2:        9
-              mem:   2^80.8
+    rop:  2^129.9
+    m:   2^12.8
+    red:  2^102.3
+    delta_0: 1.005603
+    beta:      240
+    repeat:  170.419
+    d:   2^12.8
+    c:   23.025
+    post:   2^97.0
+    prob_inv:   2^27.6
+    k:   2^12.2
+    h1:        7
+    h2:        9
+    mem:   2^80.8
