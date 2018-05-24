@@ -86,13 +86,12 @@ EXAMPLE :\
     Start MITM on the k-dim samples . . .
 
     Table size = 451
+    
     ** Mitm with (YA_2, Yc) ** 
-
     Number of noisy searches = 48
      - Input is LWE
 
     ** Mitm with (YA_2, Yu) **
-
     Number of noisy searches = 451
      - Input is uniform    
 
