@@ -44,6 +44,9 @@ EXAMPLE :
 
     Number of noisy searches = 34281
      - Input is uniform
+     
     > sage: s[-k:]
+    
     (0, -1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+
 
