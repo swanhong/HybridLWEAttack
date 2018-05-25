@@ -3,22 +3,7 @@
 "mitm.py" is an attack code for Sage.
 This is just for a proof-of-concept of the hybrid attack, and hence it is definitely not optimized.
 
-### How to run
-
-The most high-level function is **hybrid_mitm**.
-It takes the following input
-
-    n, q, alpha (=8/q default) 		: LWE parameters
-    h 					: the hamming weight of secret vector
-    beta 					: BKZ blocksize
-    k					: LWE dim after Dim-Error tradeoff
-    tau (= 30 default)			: LWE sample number after Dim-Error tradeoff
-    ell (= h default)			: MITM parameter (hamming weight bound)
-
-and generate LWE sample (A, **c**) and Uniform vector **u**,
-and perform the hybrid MITM attack on (A, **c**), and then on (A, **u**).
-  
-EXAMPLE :
+### EXAMPLE :
 
     > sage: from Mitm import *
     > sage: n = 45; q = next_prime(2^14); h = 6; beta = 20; k = 30; tau = 30;
