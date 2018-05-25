@@ -11,16 +11,11 @@ The current version is somewhat unstable for estimating small parameters such as
 
 We recommend to use our **MITM_estimator** function in "estimator_hybrid.py". This function estimates the cost of ring operations, given a bounded memory capacity 2^80.
 
-EXAMPLE :\
-    * sage: from estimator_hybrid import *\
-    * sage: n = 8192\
-    * sage: q = next_prime(2^125)\
-    * sage: alpha = 8 / q\
-    * sage: h = 64 # default 64
-    * sage: MITM_estimator(n, alpha, q, h)
-    
-    
-    
+EXAMPLE :
+
+    > sage: from estimator_hybrid import *
+    > sage: n = 8192; q = next_prime(2^125); alpha = 8/q; h = 64;
+    > sage: MITM_estimator(n, alpha, q, h)
 
     Chosen Parameters :
              n =  8192, log(q) = 125.0, stddev =  3.19, HW(s) =   64

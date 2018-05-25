@@ -18,25 +18,27 @@ It takes the following input
 and generate LWE sample (A, **c**) and Uniform vector **u**,
 and perform the hybrid MITM attack on (A, **c**), and then on (A, **u**).
   
-EXAMPLE :\
-    * sage: from Mitm import *\
-    * sage: n = 50; q = next_prime(2^18); h = 8; beta = 20; k = 30;\
-    * sage: hybrid_mitm(n, q, h, beta, k)
-    
-    Performing Dimension-error trade-off . . .
+EXAMPLE :
 
-    New k-dim samples have error bound = 405.96, where q = 16411
+    > sage: from Mitm import *
+    > sage: n = 45; q = next_prime(2^14); h = 6; beta = 20; k = 30; tau = 30;
+    > sage: A, c, u, s = gen_instance(n, q, h, m = tau * n)
+    (A, c) is n-dim LWE samples (with secret s) / (A, u) is uniform samples
+    > sage: A_k, c_k, u_k, B = dim_error_tradeoff(A, c, u, beta, h, k)
+    (A_k, c_k) is k-dim LWE samples (with secret s[-k:]) / (A_k, u_k) is uniform samples. 
+    > sage: Mitm_on_LWE(A_k, c_k, u_k, B, h)
+    Table size = 34281
 
-    Start MITM on the k-dim samples . . .
+    ** Mitm on (A_k, c_k) ** 
 
-    Table size = 451
-    
-    ** Mitm with (YA_2, Yc) ** 
-    Number of noisy searches = 48
-     - Input is LWE
+    Number of noisy searches = 193
+     - Input is LWE with secret
+    (0, -1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
 
-    ** Mitm with (YA_2, Yu) **
-    Number of noisy searches = 451
-     - Input is uniform    
+    ** Mitm on (A_k, u_k) **
 
+    Number of noisy searches = 34281
+     - Input is uniform
+    > sage: s[-k:]
+    (0, -1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
 
