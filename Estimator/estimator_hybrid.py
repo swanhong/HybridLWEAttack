@@ -189,13 +189,13 @@ def dual_scale_hyb(n, alpha, q, bound, k1, k2, h1, h2, secret_distribution,
 
     return best
 
-def MITM_estimator(n, alpha, q, h = 64, start_bound = 10, Max_bound = 13, step_size = 1):
+def MITM_estimator(n, alpha, q, h = 64, start_bound = 10, Max_bound = 13, step_size = 1, reduction_cost_model = reduction_default_cost):
     bound = float(start_bound)
     mitm_hyb = partial(hyb_estimate, dual_scale_hyb)
     best = None
     bound_best = bound
     print 'Chosen Parameters : '
-    print '     n = %5d, log(q) = %5.1f, stddev = %5.2f, HW(s) = %4d,' % (n, log(q,2), RR(stddevf(alpha * q)), sparse)
+    print '     n = %5d, log(q) = %5.1f, stddev = %5.2f, HW(s) = %4d' % (n, log(q,2), RR(stddevf(alpha * q)), h)
     print
     Level = 0
     step = float(step_size)
@@ -205,7 +205,7 @@ def MITM_estimator(n, alpha, q, h = 64, start_bound = 10, Max_bound = 13, step_s
 
     while Level <= 2:
 
-        res = mitm_hyb(n, alpha, q, bound, secret_distribution=((-1, 1), h))
+        res = mitm_hyb(n, alpha, q, bound, secret_distribution=((-1, 1), h), reduction_cost_model=reduction_cost_model)
         
         print "Optimizing with beta = %4d . . ." % res["beta"]
 

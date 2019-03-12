@@ -17,7 +17,7 @@ EXAMPLE :
 
     > sage: from estimator_hybrid import *
     > sage: n = 8192; q = next_prime(2^125); alpha = 8/q; h = 64;
-    > sage: MITM_estimator(n, alpha, q, h)
+    > sage: MITM_estimator(n, alpha, q, h, reduction_cost_model=BKZ.sieve)
     
     Chosen Parameters :
              n =  8192, log(q) = 125.0, stddev =  3.19, HW(s) =   64
