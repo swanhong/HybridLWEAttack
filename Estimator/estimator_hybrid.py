@@ -50,8 +50,6 @@ def hyb_estimate(f, n, alpha, q, bound, secret_distribution=True, **kwds):
         mem_bound = 2 ** 80     # Bound the memory capacity for MITM by 2**80.
         h1 = 5
 
-        sum_of_candidates = 0
-
         while h1 < k1: 
             h2 = 5
 
@@ -88,6 +86,8 @@ def hyb_estimate(f, n, alpha, q, bound, secret_distribution=True, **kwds):
                 logging.getLogger("guess").debug(current)
 
                 if int(cost_query) > int(cost_lat):
+                    best_h1 = current
+                    best_h1["rop"] = oo
                     #print 'mem = %5.1f, cost_tableConstruct = %5.1f, cost_query = %5.1f, cost_lat = %5.1f' % (log(mem,2), log(cost_tableConstruct,2),log(cost_query,2), log(cost_lat,2))
                     break
                 
